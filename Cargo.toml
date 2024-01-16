@@ -1,0 +1,37 @@
+[package]
+name = "aceton"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1"
+async-trait = "0.1"
+clap = { version = "4", features = ["derive"] }
+futures = "0.3"
+hex = "0.4"
+impl-tools = "0.10"
+lazy_static = "1"
+num-bigint = "0.4"
+opentelemetry = "0.21"
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.14", features = ["metrics"] }
+opentelemetry-semantic-conventions = "0.13"
+reqwest = { version = "0.11", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+strum = "0.25"
+thiserror = "1"
+tonlib = "0.12"
+toml = "0.7.3"
+tracing = "0.1"
+tracing-opentelemetry = "0.22"
+
+[dependencies.tokio]
+version = "1"
+default-features = false
+features = ["fs", "macros", "rt-multi-thread", "signal"]
+
+[dependencies.tracing-subscriber]
+version = "0.3"
+default-features = false
+features = ["ansi", "fmt", "json", "smallvec", "std", "time"]

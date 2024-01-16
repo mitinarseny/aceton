@@ -1,0 +1,76 @@
+secrets:
+  aceton_mnemonic:
+    file: ./mnemonic.txt
+
+services:
+  aceton:
+    build:
+      context: .
+    command:
+      - '--mnemonic'
+      - '/run/secrets/aceton_mnemonic'
+      - '--otlp-endpoint'
+      - 'http://otel-collector:4317'
+      - '-vv' # info log level
+    volumes:
+      - './aceton.toml:/etc/aceton/aceton.toml:ro'
+    secrets:
+      - aceton_mnemonic
+    depends_on:
+      - otel-collector
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol-contrib/config.yaml
+    ports:
+      - '8888:8888/tcp' # Prometheus metrics exposed by the collector
+      - '8889:8889/tcp' # Prometheus exporter metrics
+      - '4317:4317/tcp' # OTLP gRPC receiver
+    depends_on:
+      - prometheus
+      - tempo
+
+  tempo:
+    image: 'grafana/tempo:latest'
+    command:
+      - '-config.file=/etc/tempo.yaml'
+      - '-server.http-listen-port=3200'
+      - '-log.level'
+      - 'warn'
+    volumes:
+      - './tempo.yaml:/etc/tempo.yaml:ro'
+      - '/var/lib/tempo'
+    ports:
+      - '3200/tcp' # tempo
+      # - '4317:4317/tcp' # otlp grpc
+
+  prometheus:
+    image: 'prom/prometheus:latest'
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--log.level=warn'
+    volumes:
+      - './prometheus.yml:/etc/prometheus/prometheus.yml:ro'
+    ports:
+      - '9090:9090/tcp'
+    logging:
+      driver: none
+    restart: unless-stopped
+
+  grafana:
+    image: 'grafana/grafana-oss:10.2.2-ubuntu'
+    environment:
+      TEMPO_ADDR: 'tempo:3200'
+      PROMETHEUS_ADDR: 'prometheus:9090'
+    volumes:
+      - './grafana/grafana.ini:/etc/grafana/grafana.ini:ro'
+      - './grafana/datasources/:/etc/grafana/provisioning/datasources/:ro'
+      - './grafana/dashboards-provisioning:/etc/grafana/provisioning/dashboards:ro'
+      - './grafana/dashboards:/var/lib/grafana/dashboards:ro'
+    depends_on:
+      - tempo
+      - prometheus
+    ports:
+      - '3000:3000/tcp'
