@@ -4,14 +4,13 @@ secrets:
 
 services:
   aceton:
-    build:
-      context: .
+    build: .
     command:
       - '--mnemonic'
       - '/run/secrets/aceton_mnemonic'
       - '--otlp-endpoint'
       - 'http://otel-collector:4317'
-      - '-vv' # info log level
+      - '-vv' # info
     volumes:
       - './aceton.toml:/etc/aceton/aceton.toml:ro'
     secrets:

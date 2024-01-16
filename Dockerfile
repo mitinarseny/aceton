@@ -1,12 +1,14 @@
 # syntax=docker/dockerfile:1.4
-FROM rust:1.74.0-bullseye as env
+FROM rust:1.75 as env
 RUN rm -f /etc/apt/apt.conf.d/docker-clean \
     && echo 'Binary::apt::APT::Keep-Downloaded-Packages "true";' > /etc/apt/apt.conf.d/keep-cache
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt \
     apt update \
     && apt install --yes --no-install-recommends \
-    cmake
+    cmake \
+    pkg-config \
+    libssl-dev
 WORKDIR /app
 COPY ./rust-toolchain.toml .
 # NOTE: `rustup show` might not force-install toolchain in the future
@@ -21,9 +23,14 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
     cargo build --bin aceton --locked --release \
     && mv ./target/release/aceton /usr/local/bin/
 
-FROM alpine AS aceton
-RUN apk add \
-    zlib
+FROM gcr.io/distroless/cc-debian12 AS aceton
+
+# RUN --mount=type=cache,target=/var/cache/apt \
+#     --mount=type=cache,target=/var/lib/apt \
+#     apt update \
+#     && apt install --yes --no-install-recommends \
+#     libz-dev \
+#     libssl3
 
 COPY --from=builder /usr/local/bin/aceton /usr/local/bin/
 

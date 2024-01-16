@@ -3,4 +3,4 @@ mod gas;
 pub mod metrics;
 pub mod tlb;
 
-pub use self::{address::*, gas::*};
+pub use self::gas::*;

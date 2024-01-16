@@ -11,6 +11,7 @@ futures = "0.3"
 hex = "0.4"
 impl-tools = "0.10"
 lazy_static = "1"
+libz-sys = { version = "1", default-features = false, features = ["zlib-ng"] }
 num-bigint = "0.4"
 opentelemetry = "0.21"
 opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }

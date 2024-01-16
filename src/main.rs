@@ -7,11 +7,12 @@ use std::{
 
 use anyhow::Context;
 use clap::{Args, Parser, ValueHint};
+use futures::{pin_mut, select_biased, FutureExt};
 use lazy_static::lazy_static;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::{propagation::TraceContextPropagator, Resource};
-use tokio::fs;
+use tokio::{fs, signal};
 use tonlib::{
     mnemonic::Mnemonic,
     wallet::{TonWallet, WalletVersion},
@@ -73,7 +74,20 @@ struct LoggingArgs {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    run(CliArgs::parse()).await
+    let r = run(CliArgs::parse()).fuse();
+    let shutdown = shutdown_signal().fuse();
+
+    pin_mut!(r);
+    pin_mut!(shutdown);
+
+    select_biased! {
+        _ = shutdown => {},
+        r = r => {
+            r?;
+        },
+    }
+
+    Ok(())
 }
 
 async fn run(args: CliArgs) -> anyhow::Result<()> {
@@ -239,4 +253,30 @@ impl LoggingArgs {
         }
         .with_filter(LevelFilter::from_level(self.verbosity_level()))
     }
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    info!("signal received, starting shutdown...");
 }

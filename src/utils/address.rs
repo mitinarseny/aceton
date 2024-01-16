@@ -30,5 +30,3 @@ macro_rules! ton_address {
         }
     };
 }
-
-// pub use ton_address;
