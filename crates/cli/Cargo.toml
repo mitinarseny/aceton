@@ -1,0 +1,21 @@
+[package]
+name = "aceton-cli"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+tonlibjson-client.workspace = true
+
+anyhow.workspace = true
+clap = { version = "4", features = ["derive"] }
+lazy_static.workspace = true
+tokio.workspace = true
+url.workspace = true
+
+opentelemetry = "0.22"
+opentelemetry-otlp = { version = "0.15", features = ["metrics"] }
+opentelemetry_sdk = { version = "0.22", features = ["rt-tokio", "metrics"] }
+opentelemetry-semantic-conventions = "0.14"
+tracing.workspace = true
+tracing-opentelemetry = "0.23"
+tracing-subscriber = { version = "0.3", features = ["json"] }

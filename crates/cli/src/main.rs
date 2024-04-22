@@ -1,22 +1,15 @@
-mod config;
+mod metrics;
 
-use std::{
-    io::{self, IsTerminal},
-    path::PathBuf,
-};
+use core::time::Duration;
+use std::io::{self, IsTerminal};
 
-use anyhow::Context;
-use clap::{Args, Parser, ValueHint};
-use futures::{pin_mut, select_biased, FutureExt};
+use clap::{Args, Parser};
 use lazy_static::lazy_static;
+use metrics::MetricsFilter;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::{propagation::TraceContextPropagator, Resource};
-use tokio::{fs, signal};
-use tonlib::{
-    mnemonic::Mnemonic,
-    wallet::{TonWallet, WalletVersion},
-};
+use tonlibjson_client::ton::TonClientBuilder;
 use tracing::{info, level_filters::LevelFilter, Level, Subscriber};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
@@ -25,31 +18,27 @@ use tracing_subscriber::{
     registry::LookupSpan,
     Layer, Registry,
 };
-
-use aceton::{self, utils::metrics::MetricsFilter, App};
-
-use crate::config::AcetonConfig;
+use url::Url;
 
 #[derive(Parser)]
 struct CliArgs {
-    #[arg(
-        short, long,
-        value_parser,
-        value_hint = ValueHint::FilePath,
-        value_name = "FILE",
-        default_value_os_t = PathBuf::from("./aceton.toml"),
-    )]
-    config: PathBuf,
+    // #[arg(
+    //     short, long,
+    //     value_parser,
+    //     value_hint = ValueHint::FilePath,
+    //     value_name = "FILE",
+    //     default_value_os_t = PathBuf::from("./aceton.toml"),
+    // )]
+    // config: PathBuf,
 
-    #[arg(
-        short, long,
-        value_parser,
-        value_hint = ValueHint::FilePath,
-        value_name = "FILE",
-        default_value_os_t = PathBuf::from("./mnemonic.txt"),
-    )]
-    mnemonic: PathBuf,
-
+    // #[arg(
+    //     short, long,
+    //     value_parser,
+    //     value_hint = ValueHint::FilePath,
+    //     value_name = "FILE",
+    //     default_value_os_t = PathBuf::from("./mnemonic.txt"),
+    // )]
+    // mnemonic: PathBuf,
     #[command(flatten)]
     logging: LoggingArgs,
 }
@@ -74,41 +63,37 @@ struct LoggingArgs {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let r = run(CliArgs::parse()).fuse();
-    let shutdown = shutdown_signal().fuse();
-
-    pin_mut!(r);
-    pin_mut!(shutdown);
-
-    select_biased! {
-        _ = shutdown => {},
-        r = r => {
-            r?;
-        },
-    }
-
-    Ok(())
+    run(CliArgs::parse()).await
 }
 
 async fn run(args: CliArgs) -> anyhow::Result<()> {
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::default());
     args.logging.make_subscriber()?.try_init()?;
 
-    let config = args.read_config().await.context("config")?;
-    let wallet = args.get_wallet().await.context("wallet")?;
+    let mut ton = TonClientBuilder::from_config_url(
+        Url::parse("https://ton.org/global-config.json").unwrap(),
+        Duration::from_secs(60),
+    )
+    .build()
+    .await?;
+    info!("client init");
+    ton.ready().await?;
+    info!("client ready");
 
-    info!("creating TON client...");
-    let client = config
-        .make_ton_client()
-        .await
-        .context("unable to make TonClient")?;
-
-    let app = App::new(client, config.config, wallet)
-        .await
-        .context("failed to initialize app")?;
-    info!("app initialized, running...");
-
-    app.run().await
+    let state = ton
+        .get_account_state("EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e")
+        .await;
+    println!("state: {:?}", state);
+    let reserves = ton
+        .run_get_method(
+            "EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e".to_string(),
+            "get_reserves".to_string(),
+            [].into(),
+        )
+        .await?;
+    info!("{:?}", reserves);
+    // ton_client::request()
+    Ok(())
 }
 
 lazy_static! {
@@ -116,35 +101,6 @@ lazy_static! {
         opentelemetry_semantic_conventions::resource::SERVICE_NAME,
         env!("CARGO_PKG_NAME"),
     )]);
-}
-
-impl CliArgs {
-    async fn read_config(&self) -> anyhow::Result<AcetonConfig> {
-        let s = fs::read_to_string(&self.config)
-            .await
-            .with_context(|| format!("failed to read file '{}'", self.config.display()))?;
-
-        toml::from_str(s.as_ref()).with_context(|| {
-            format!(
-                "failed to parse TOML config file '{}'",
-                self.config.display()
-            )
-        })
-    }
-
-    async fn read_mnemonic(&self) -> anyhow::Result<Mnemonic> {
-        let s = fs::read_to_string(&self.mnemonic)
-            .await
-            .with_context(|| format!("failed to read file '{}'", self.mnemonic.display()))?;
-
-        Mnemonic::new(s.split_ascii_whitespace().collect(), &None).map_err(Into::into)
-    }
-
-    async fn get_wallet(&self) -> anyhow::Result<TonWallet> {
-        let mnemonic = self.read_mnemonic().await?;
-        let key_pair = mnemonic.to_key_pair()?;
-        TonWallet::derive(0, WalletVersion::V4R2, &key_pair).map_err(Into::into)
-    }
 }
 
 impl LoggingArgs {
@@ -181,7 +137,7 @@ impl LoggingArgs {
                         (env!("CARGO_PKG_NAME"), Level::TRACE),
                         ("otel::tracing", Level::TRACE),
                     ])
-                    .with_default(Level::WARN),
+                    .with_default(Level::INFO),
             ))
     }
 
@@ -253,30 +209,4 @@ impl LoggingArgs {
         }
         .with_filter(LevelFilter::from_level(self.verbosity_level()))
     }
-}
-
-async fn shutdown_signal() {
-    let ctrl_c = async {
-        signal::ctrl_c()
-            .await
-            .expect("failed to install Ctrl+C handler");
-    };
-
-    #[cfg(unix)]
-    let terminate = async {
-        signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("failed to install signal handler")
-            .recv()
-            .await;
-    };
-
-    #[cfg(not(unix))]
-    let terminate = std::future::pending::<()>();
-
-    tokio::select! {
-        _ = ctrl_c => {},
-        _ = terminate => {},
-    }
-
-    info!("signal received, starting shutdown...");
 }
