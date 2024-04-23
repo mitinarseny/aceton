@@ -8,6 +8,7 @@ tonlibjson-client.workspace = true
 
 anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
+futures.workspace = true
 lazy_static.workspace = true
 tokio.workspace = true
 url.workspace = true

@@ -5,6 +5,10 @@ version = 3
 [[package]]
 name = "aceton-arbitrage"
 version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "tonlibjson-client",
+]
 
 [[package]]
 name = "aceton-cli"
@@ -12,6 +16,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap",
+ "futures",
  "lazy_static",
  "opentelemetry",
  "opentelemetry-otlp",
@@ -1682,7 +1687,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 [[package]]
 name = "tl_parser"
 version = "0.1.0"
-source = "git+https://github.com/mitinarseny/ton-grpc.git#43eedcf45f21eaed69ac8f8569afbdc5af9b820a"
+source = "git+https://github.com/mitinarseny/ton-grpc.git#ab1f53825b87ecc1858387e1014e3228101a2ed6"
 dependencies = [
  "anyhow",
  "crc32fast",
@@ -1806,7 +1811,7 @@ dependencies = [
 [[package]]
 name = "tonlibjson-client"
 version = "0.17.2"
-source = "git+https://github.com/mitinarseny/ton-grpc.git#43eedcf45f21eaed69ac8f8569afbdc5af9b820a"
+source = "git+https://github.com/mitinarseny/ton-grpc.git#ab1f53825b87ecc1858387e1014e3228101a2ed6"
 dependencies = [
  "anyhow",
  "async-stream",
@@ -1847,7 +1852,7 @@ dependencies = [
 [[package]]
 name = "tonlibjson-sys"
 version = "0.3.1"
-source = "git+https://github.com/mitinarseny/ton-grpc.git#43eedcf45f21eaed69ac8f8569afbdc5af9b820a"
+source = "git+https://github.com/mitinarseny/ton-grpc.git#ab1f53825b87ecc1858387e1014e3228101a2ed6"
 dependencies = [
  "anyhow",
  "cmake",

@@ -13,9 +13,13 @@ impl MetricsFilter {
         meta.is_event()
             && meta.fields().iter().any(|field| {
                 let name = field.name();
-                name.starts_with(METRIC_PREFIX_COUNTER)
-                    || name.starts_with(METRIC_PREFIX_MONOTONIC_COUNTER)
-                    || name.starts_with(METRIC_PREFIX_HISTOGRAM)
+                [
+                    METRIC_PREFIX_COUNTER,
+                    METRIC_PREFIX_MONOTONIC_COUNTER,
+                    METRIC_PREFIX_HISTOGRAM,
+                ]
+                .iter()
+                .any(|p| name.starts_with(p))
             })
     }
 }

@@ -9,14 +9,15 @@ edition = "2021"
 
 [workspace.dependencies]
 anyhow = "1"
+futures = "0.3"
 lazy_static = "1"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"
 
 [workspace.dependencies.tonlibjson-client]
-# path = "../ton-grpc/tonlibjson-client"
-git = "https://github.com/mitinarseny/ton-grpc.git"
-# git = "https://github.com/getgems-io/ton-grpc.git"
+git = "https://github.com/getgems-io/ton-grpc.git"
 features = ["testnet"]
-# tag = "tonlibjson-client-v0.17.2"
+
+[patch."https://github.com/getgems-io/ton-grpc.git"]
+tonlibjson-client = { git = "https://github.com/mitinarseny/ton-grpc.git" }
