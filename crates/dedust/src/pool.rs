@@ -28,7 +28,7 @@ pub trait DedustPool: TonContractI {
 
     async fn get_reserves(&self) -> anyhow::Result<[BigUint; 2]> {
         let [reserve0, reserve1] = self
-            .get("get_assets", [].into())
+            .get("get_reserves", [].into())
             .await??
             .try_into()
             .map_err(|stack| anyhow!("invalid output stack: {stack:?}"))?;

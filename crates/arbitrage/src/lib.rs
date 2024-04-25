@@ -17,8 +17,10 @@ impl Arbitrager {
             self.ton.clone(),
             "EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e".parse()?,
         );
-        let assets = dedust_pool.get_assets().await?;
-        info!("assets: {assets:?}");
+        loop {
+            let reserves = dedust_pool.get_reserves().await?;
+            info!("assets: {reserves:?}");
+        }
         Ok(())
     }
 }

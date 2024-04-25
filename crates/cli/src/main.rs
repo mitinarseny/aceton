@@ -8,7 +8,7 @@ use args::CliArgs;
 use clap::Parser;
 use futures::stream::TryStreamExt;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
-use tonlibjson_client::block::InternalTransactionId;
+use tonlibjson_client::{block::InternalTransactionId, ton::TonClient};
 use tracing::info;
 use tracing_subscriber::util::SubscriberInitExt;
 
