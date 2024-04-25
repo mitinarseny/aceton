@@ -1,6 +1,7 @@
 use tlb::{BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, Error, NBits};
 use tlb_ton::MsgAddress;
 
+#[derive(Debug, Clone, Copy)]
 pub enum DedustAsset {
     /// native$0000 = Asset;
     Native,

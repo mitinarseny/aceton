@@ -6,14 +6,19 @@ version = 3
 name = "aceton-arbitrage"
 version = "0.1.0"
 dependencies = [
+ "aceton-core",
+ "aceton-dedust",
  "anyhow",
+ "tlb-ton",
  "tonlibjson-client",
+ "tracing",
 ]
 
 [[package]]
 name = "aceton-cli"
 version = "0.1.0"
 dependencies = [
+ "aceton-arbitrage",
  "anyhow",
  "clap",
  "futures",
@@ -1903,9 +1908,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "038289e1678bb60d935cf75b3288bcabb34a5c8db439783fd0fd13d95e6bfd7d"
+checksum = "5a02a76d05fdd3dbffc8970a458af955e9adb6f042be1ff88a84006f78fb9e60"
 dependencies = [
  "bitvec",
  "either",
@@ -1917,9 +1922,9 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d11ff53385d8e11300ada3ebbc7f352fdc25893d9093409a4f3c052e4b2631b"
+checksum = "4185e4ffe1a69cfad1f4bdc8d0821d274329dd243aa87f4471019bc317fb384f"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
@@ -1932,9 +1937,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.0"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "651f41aaac3118f066f7e34bb724507cb74210c66f5765f21c258394870e9f61"
+checksum = "f24c45d120883b47c1dcec2240fd6d11121e0f594c50761523d7b1ded7039f2e"
 dependencies = [
  "bitvec",
  "either",

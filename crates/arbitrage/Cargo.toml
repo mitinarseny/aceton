@@ -4,5 +4,10 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+aceton-dedust.workspace = true
+aceton-core.workspace = true
+
 anyhow.workspace = true
+tlb-ton.workspace = true
 tonlibjson-client.workspace = true
+tracing.workspace = true

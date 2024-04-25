@@ -3,6 +3,7 @@ mod metrics;
 
 use core::pin::pin;
 
+use aceton_arbitrage::Arbitrager;
 use args::CliArgs;
 use clap::Parser;
 use futures::stream::TryStreamExt;
@@ -21,9 +22,13 @@ async fn run(args: CliArgs) -> anyhow::Result<()> {
     args.logging.make_subscriber()?.try_init()?;
 
     let mut ton = args.ton_config()?.build().await?;
-    info!("client init");
+    info!("initializing TON client...");
     ton.ready().await?;
-    info!("client ready");
+    info!("TON client is ready");
+
+    let arb = Arbitrager::new(ton);
+
+    arb.run().await?;
 
     // let txs = ton
     //     .raw_get_transactions(
@@ -51,13 +56,13 @@ async fn run(args: CliArgs) -> anyhow::Result<()> {
     //     .get_account_state("EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e")
     //     .await;
     // println!("state: {:?}", state);
-    let reserves = ton
-        .run_get_method(
-            "EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e".to_string(),
-            "get_assets".to_string(),
-            [].into(),
-        )
-        .await?;
-    info!("{:?}", reserves);
+    // let reserves = ton
+    //     .run_get_method(
+    //         "EQBGXZ9ddZeWypx8EkJieHJX75ct0bpkmu0Y4YoYr3NM0Z9e".to_string(),
+    //         "get_assets".to_string(),
+    //         [].into(),
+    //     )
+    //     .await?;
+    // info!("{:?}", reserves);
     Ok(())
 }

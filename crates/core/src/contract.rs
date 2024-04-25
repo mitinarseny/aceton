@@ -54,6 +54,10 @@ pub struct TonContract {
 }
 
 impl TonContract {
+    pub fn new(client: TonClient, address: MsgAddress) -> Self {
+        Self { address, client }
+    }
+
     pub fn address(&self) -> MsgAddress {
         self.address
     }
