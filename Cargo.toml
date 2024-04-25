@@ -8,9 +8,21 @@ version = "0.1.0"
 edition = "2021"
 
 [workspace.dependencies]
+aceton-arbitrage.path = "./crates/arbitrage"
+aceton-cli.path = "./crates/cli"
+aceton-core.path = "./crates/core"
+aceton-dedust.path = "./crates/dedust"
+
 anyhow = "1"
+async-trait = "0.1"
+base64 = "0.21"
+bitvec = "1"
 futures = "0.3"
 lazy_static = "1"
+num-bigint = "0.4"
+thiserror = "1"
+tlb = "0.2.0"
+tlb-ton = "0.2.0"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"

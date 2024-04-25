@@ -1,7 +1,7 @@
 use tonlibjson_client::ton::TonClient;
 
 pub struct Arbitrager {
-    ton: TonClient
+    ton: TonClient,
 }
 
 impl Arbitrager {
