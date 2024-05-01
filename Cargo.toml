@@ -40,7 +40,3 @@ features = ["testnet"]
 [workspace.dependencies.tonlibjson-sys]
 git = "https://github.com/getgems-io/ton-grpc.git"
 features = ["testnet"]
-
-[patch."https://github.com/getgems-io/ton-grpc.git"]
-tonlibjson-client = { git = "https://github.com/mitinarseny/ton-grpc.git" }
-tonlibjson-sys = { git = "https://github.com/mitinarseny/ton-grpc.git" }
