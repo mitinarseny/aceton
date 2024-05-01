@@ -4,10 +4,13 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-aceton-dedust.workspace = true
 aceton-core.workspace = true
+aceton-dedust.workspace = true
 
 anyhow.workspace = true
+num-bigint.workspace = true
+petgraph = "0.6"
 tlb-ton.workspace = true
 tonlibjson-client.workspace = true
+tonlibjson-sys.workspace = true
 tracing.workspace = true

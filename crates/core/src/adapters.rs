@@ -63,7 +63,7 @@ pub trait TvmBoxedStackEntryExt: Sized {
     where
         T: FromStr,
         T::Err: StdError + Send + Sync + 'static;
-    fn from_number<T>(number: T) -> anyhow::Result<Self>
+    fn from_number<T>(number: T) -> Self
     where
         T: Display;
 }
@@ -107,14 +107,14 @@ impl TvmBoxedStackEntryExt for TvmBoxedStackEntry {
 
         T::from_str(number).map_err(Into::into)
     }
-    fn from_number<T>(number: T) -> anyhow::Result<Self>
+    fn from_number<T>(number: T) -> Self
     where
         T: Display,
     {
-        Ok(Self::TvmStackEntryNumber(TvmStackEntryNumber {
+        Self::TvmStackEntryNumber(TvmStackEntryNumber {
             number: TvmNumberDecimal {
                 number: number.to_string(),
             },
-        }))
+        })
     }
 }

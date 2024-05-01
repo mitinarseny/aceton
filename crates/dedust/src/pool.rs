@@ -1,6 +1,9 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 use num_bigint::BigUint;
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
+use strum::EnumString;
 use tlb::{
     BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, CellBuilder,
     CellBuilderError, CellDeserialize, CellParser, CellParserError, CellSerialize, Data, Ref, Same,
@@ -12,7 +15,7 @@ use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
 use crate::DedustAsset;
 
 #[async_trait]
-pub trait DedustPool: TonContractI {
+pub trait DedustPoolI: TonContractI {
     async fn get_assets(&self) -> anyhow::Result<[DedustAsset; 2]> {
         let [asset0, asset1] = self
             .get("get_assets", [].into())
@@ -59,7 +62,7 @@ pub trait DedustPool: TonContractI {
                 "estimate_swap_out",
                 [
                     TvmBoxedStackEntryExt::store_cell_as::<_, Data>(asset_in)?,
-                    TvmBoxedStackEntryExt::from_number(amount_in)?,
+                    TvmBoxedStackEntryExt::from_number(amount_in),
                 ]
                 .into(),
             )
@@ -74,7 +77,7 @@ pub trait DedustPool: TonContractI {
     }
 }
 
-impl<C> DedustPool for C where C: TonContractI {}
+impl<C> DedustPoolI for C where C: TonContractI {}
 
 pub struct EstimateSwapOutResult {
     pub asset_out: DedustAsset,
@@ -179,15 +182,17 @@ impl CellSerialize for SwapStepParams {
     }
 }
 
-#[derive(Clone, Copy)]
-pub enum PoolType {
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, strum::Display, EnumString)]
+#[strum(serialize_all = "snake_case")]
+pub enum DedustPoolType {
     /// volatile$0 = PoolType;
     Volatile,
     /// stable$1 = PoolType;
     Stable,
 }
 
-impl BitPack for PoolType {
+impl BitPack for DedustPoolType {
     fn pack<W>(&self, writer: W) -> Result<(), W::Error>
     where
         W: BitWriter,
@@ -200,7 +205,7 @@ impl BitPack for PoolType {
     }
 }
 
-impl BitUnpack for PoolType {
+impl BitUnpack for DedustPoolType {
     fn unpack<R>(mut reader: R) -> Result<Self, R::Error>
     where
         R: BitReader,
@@ -214,7 +219,7 @@ impl BitUnpack for PoolType {
 
 /// pool_params#_ pool_type:PoolType asset0:Asset asset1:Asset = PoolParams;
 pub struct PoolParams {
-    pub r#type: PoolType,
+    pub r#type: DedustPoolType,
     pub assets: [DedustAsset; 2],
 }
 

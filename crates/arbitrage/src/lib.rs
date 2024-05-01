@@ -1,15 +1,22 @@
 use aceton_core::TonContract;
-use aceton_dedust::DedustPool;
-use tonlibjson_client::ton::TonClient;
+use aceton_dedust::{api::DedustPool, DedustAsset, DedustPoolI};
+use anyhow::anyhow;
+use petgraph::Graph;
+use tonlibjson_client::{
+    block::{BoxedAccountState, MsgMessage},
+    ton::TonClient,
+};
+use tonlibjson_sys::{emulate_run_method, TransactionEmulator, TvmEmulator};
 use tracing::info;
 
 pub struct Arbitrager {
+    g: Graph<DedustAsset, TonContract>,
     ton: TonClient,
 }
 
 impl Arbitrager {
-    pub fn new(ton: TonClient) -> Self {
-        Self { ton }
+    pub fn new(ton: TonClient, pools: impl IntoIterator<Item = DedustPool>) -> Self {
+        Self { ton, g: todo!() }
     }
 
     pub async fn run(&self) -> anyhow::Result<()> {

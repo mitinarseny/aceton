@@ -18,11 +18,17 @@ async-trait = "0.1"
 base64 = "0.21"
 bitvec = "1"
 futures = "0.3"
+hex-literal = "0.4"
 lazy_static = "1"
 num-bigint = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
+serde = "1"
+serde_json = "1"
+serde_with = "3.8"
+strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tlb = "0.2.2"
-tlb-ton = "0.2.2"
+tlb = "0.2.3"
+tlb-ton = { version = "0.2.3", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"
@@ -31,5 +37,10 @@ url = "2.5"
 git = "https://github.com/getgems-io/ton-grpc.git"
 features = ["testnet"]
 
+[workspace.dependencies.tonlibjson-sys]
+git = "https://github.com/getgems-io/ton-grpc.git"
+features = ["testnet"]
+
 [patch."https://github.com/getgems-io/ton-grpc.git"]
 tonlibjson-client = { git = "https://github.com/mitinarseny/ton-grpc.git" }
+tonlibjson-sys = { git = "https://github.com/mitinarseny/ton-grpc.git" }

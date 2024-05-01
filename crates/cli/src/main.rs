@@ -4,10 +4,13 @@ mod metrics;
 use core::pin::pin;
 
 use aceton_arbitrage::Arbitrager;
+use aceton_dedust::api::DedustHTTPClient;
+use anyhow::Context;
 use args::CliArgs;
 use clap::Parser;
 use futures::stream::TryStreamExt;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
+use reqwest::Client;
 use tonlibjson_client::{block::InternalTransactionId, ton::TonClient};
 use tracing::info;
 use tracing_subscriber::util::SubscriberInitExt;
@@ -26,7 +29,15 @@ async fn run(args: CliArgs) -> anyhow::Result<()> {
     ton.ready().await?;
     info!("TON client is ready");
 
-    let arb = Arbitrager::new(ton);
+    let dedust_client = DedustHTTPClient::new(Client::new());
+
+    let pools = dedust_client
+        .get_available_pools()
+        .await
+        .context("DeDust HTTP API")?;
+    info!("pools: {:?}", pools);
+
+    let arb = Arbitrager::new(ton, pools);
 
     arb.run().await?;
 

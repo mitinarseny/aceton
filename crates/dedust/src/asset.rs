@@ -1,13 +1,18 @@
+use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr, FromInto};
 use tlb::{BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, Error, NBits};
 use tlb_ton::MsgAddress;
 
-#[derive(Debug, Clone, Copy)]
+#[serde_as]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
 pub enum DedustAsset {
     /// native$0000 = Asset;
     Native,
     /// jetton$0001 workchain_id:int8 address:uint256 = Asset;
-    Jetton(MsgAddress),
+    Jetton(#[serde_as(as = "FromInto<AddressStruct>")] MsgAddress),
     /// extra_currency$0010 currency_id:int32 = Asset;
+    #[serde(skip)]
     ExtraCurrency { currency_id: i32 },
 }
 
@@ -56,7 +61,26 @@ impl BitUnpack for DedustAsset {
             Self::EXTRA_CURRENCY_TAG => Self::ExtraCurrency {
                 currency_id: reader.unpack()?,
             },
-            tag => return Err(Error::custom(format!("unknown asset tag: {tag}"))),
+            tag => return Err(Error::custom(format!("unknown asset tag: {tag:#06b}"))),
         })
+    }
+}
+
+#[serde_as]
+#[derive(Serialize, Deserialize)]
+struct AddressStruct {
+    #[serde_as(as = "DisplayFromStr")]
+    address: MsgAddress,
+}
+
+impl From<AddressStruct> for MsgAddress {
+    fn from(AddressStruct { address }: AddressStruct) -> Self {
+        address
+    }
+}
+
+impl From<MsgAddress> for AddressStruct {
+    fn from(address: MsgAddress) -> Self {
+        Self { address }
     }
 }

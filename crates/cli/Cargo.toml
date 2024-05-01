@@ -5,11 +5,13 @@ edition.workspace = true
 
 [dependencies]
 aceton-arbitrage.workspace = true
+aceton-dedust.workspace = true
 
 anyhow.workspace = true
 clap = { version = "4", features = ["derive"] }
 futures.workspace = true
 lazy_static.workspace = true
+reqwest.workspace = true
 tokio.workspace = true
 tonlibjson-client.workspace = true
 url.workspace = true
