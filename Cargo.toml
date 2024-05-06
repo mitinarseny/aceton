@@ -19,16 +19,19 @@ base64 = "0.21"
 bitvec = "1"
 futures = "0.3"
 hex-literal = "0.4"
+impl-tools = "0.10"
+itertools = "0.12"
 lazy_static = "1"
 num-bigint = "0.4"
+num-traits = "0.2"
 reqwest = { version = "0.12", features = ["json"] }
 serde = "1"
 serde_json = "1"
 serde_with = "3.8"
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tlb = "0.2.3"
-tlb-ton = { version = "0.2.3", features = ["serde"] }
+tlb = "0.2.5"
+tlb-ton = { version = "0.2.5", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"

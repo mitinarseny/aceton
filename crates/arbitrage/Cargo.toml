@@ -8,7 +8,10 @@ aceton-core.workspace = true
 aceton-dedust.workspace = true
 
 anyhow.workspace = true
+impl-tools.workspace = true
+itertools.workspace = true
 num-bigint.workspace = true
+num-traits.workspace = true
 petgraph = "0.6"
 tlb-ton.workspace = true
 tonlibjson-client.workspace = true

@@ -2,9 +2,10 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr, FromInto};
 use tlb::{BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, Error, NBits};
 use tlb_ton::MsgAddress;
+use url::Url;
 
 #[serde_as]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum DedustAsset {
     /// native$0000 = Asset;
@@ -64,6 +65,21 @@ impl BitUnpack for DedustAsset {
             tag => return Err(Error::custom(format!("unknown asset tag: {tag:#06b}"))),
         })
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DedustAssetWithMetadata {
+    #[serde(flatten)]
+    pub asset: DedustAsset,
+    pub metadata: Option<DedustAssetMetadata>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DedustAssetMetadata {
+    pub name: String,
+    pub symbol: String,
+    pub image: Url,
+    pub decimals: u8,
 }
 
 #[serde_as]

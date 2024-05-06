@@ -24,22 +24,25 @@ async fn run(args: CliArgs) -> anyhow::Result<()> {
     opentelemetry::global::set_text_map_propagator(TraceContextPropagator::default());
     args.logging.make_subscriber()?.try_init()?;
 
-    let mut ton = args.ton_config()?.build().await?;
-    info!("initializing TON client...");
-    ton.ready().await?;
-    info!("TON client is ready");
+    // let mut ton = args.ton_config()?.build().await?;
+    // info!("initializing TON client...");
+    // ton.ready().await?;
+    // info!("TON client is ready");
 
     let dedust_client = DedustHTTPClient::new(Client::new());
 
-    let pools = dedust_client
-        .get_available_pools()
-        .await
-        .context("DeDust HTTP API")?;
-    info!("pools: {:?}", pools);
+    loop {
+        let pools = dedust_client
+            .get_available_pools()
+            .await
+            .context("DeDust HTTP API")?;
+        info!("pools count: {}", pools.len());
 
-    let arb = Arbitrager::new(ton, pools);
+        let arb = Arbitrager::new(pools);
+        info!("initialized graph");
 
-    arb.run().await?;
+        arb.run()?;
+    }
 
     // let txs = ton
     //     .raw_get_transactions(

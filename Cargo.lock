@@ -9,7 +9,10 @@ dependencies = [
  "aceton-core",
  "aceton-dedust",
  "anyhow",
+ "impl-tools",
+ "itertools",
  "num-bigint",
+ "num-traits",
  "petgraph",
  "tlb-ton",
  "tonlibjson-client",
@@ -64,6 +67,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "hex-literal",
+ "impl-tools",
  "num-bigint",
  "reqwest 0.12.4",
  "serde",
@@ -72,6 +76,7 @@ dependencies = [
  "tlb",
  "tlb-ton",
  "tonlibjson-client",
+ "url",
 ]
 
 [[package]]
@@ -2474,9 +2479,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfbf74a4bdb535140c766b53121cf1629c0e26c43fc480e9394a1c2a9566a6ec"
+checksum = "9b7f0de0f7e2585e3396a8a84495bf4c1dd3286e11ad9ec6f35f1ff8adb126cc"
 dependencies = [
  "bitvec",
  "either",
@@ -2488,9 +2493,9 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43d5fe5f683ceacd2af643595b5a054d4827f3026b80e563563c1d0a1ad5e07c"
+checksum = "3fd119990e2a8ac36cc4b4d36b9b97e923d9288b4f53fef8e1265d1a889e78f2"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
@@ -2504,9 +2509,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.3"
+version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a572e39e90e0d48eadeedb419674d3dc36faa1a3bdb2a6b73de229a722a5cf0e"
+checksum = "8a01abfbc52ab390106b8ac13edab44bef2400321c5c3e9fff992f266457910e"
 dependencies = [
  "bitvec",
  "either",

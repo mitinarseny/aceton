@@ -1,12 +1,13 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
+use impl_tools::autoimpl;
 use num_bigint::BigUint;
 use serde::{Deserialize, Serialize};
-use serde_with::serde_as;
+use serde_with::{serde_as, DisplayFromStr};
 use strum::EnumString;
 use tlb::{
     BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, CellBuilder,
-    CellBuilderError, CellDeserialize, CellParser, CellParserError, CellSerialize, Data, Ref, Same,
+    CellBuilderError, CellDeserialize, CellParser, CellParserError, CellSerialize, Data, Ref,
 };
 use tlb_ton::{Coins, MsgAddress};
 
@@ -108,6 +109,18 @@ impl BitPack for SwapKind {
     }
 }
 
+impl BitUnpack for SwapKind {
+    fn unpack<R>(mut reader: R) -> Result<Self, R::Error>
+    where
+        R: BitReader,
+    {
+        Ok(match reader.unpack()? {
+            false => Self::GivenIn,
+            true => Self::GivenOut,
+        })
+    }
+}
+
 pub type Timestamp = u32;
 
 /// swap_params#_ deadline:Timestamp recipient_addr:MsgAddressInt referral_addr:MsgAddress
@@ -130,8 +143,8 @@ where
             .pack(self.deadline)?
             .pack(self.recepient)?
             .pack(self.referral)?
-            .store_as::<_, Option<Ref<Same>>>(self.fulfill_payload.as_ref())?
-            .store_as::<_, Option<Ref<Same>>>(self.reject_payload.as_ref())?;
+            .store_as::<_, Option<Ref>>(self.fulfill_payload.as_ref())?
+            .store_as::<_, Option<Ref>>(self.reject_payload.as_ref())?;
         Ok(())
     }
 }
@@ -146,8 +159,8 @@ where
             deadline: parser.unpack()?,
             recepient: parser.unpack()?,
             referral: parser.unpack()?,
-            fulfill_payload: parser.parse_as::<_, Option<Ref<Same>>>()?,
-            reject_payload: parser.parse_as::<_, Option<Ref<Same>>>()?,
+            fulfill_payload: parser.parse_as::<_, Option<Ref>>()?,
+            reject_payload: parser.parse_as::<_, Option<Ref>>()?,
         })
     }
 }
@@ -165,6 +178,15 @@ impl CellSerialize for SwapStep {
     }
 }
 
+impl<'de> CellDeserialize<'de> for SwapStep {
+    fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
+        Ok(Self {
+            pool: parser.unpack()?,
+            params: parser.parse()?,
+        })
+    }
+}
+
 /// step_params#_ kind:SwapKind limit:Coins next:(Maybe ^SwapStep) = SwapStepParams;
 pub struct SwapStepParams {
     pub kind: SwapKind,
@@ -177,13 +199,23 @@ impl CellSerialize for SwapStepParams {
         builder
             .pack(self.kind)?
             .pack_as::<_, &Coins>(&self.limit)?
-            .store_as::<_, Option<Ref<Same>>>(self.next.as_ref())?;
+            .store_as::<_, Option<Ref>>(self.next.as_ref())?;
         Ok(())
     }
 }
 
+impl<'de> CellDeserialize<'de> for SwapStepParams {
+    fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
+        Ok(Self {
+            kind: parser.unpack()?,
+            limit: parser.unpack_as::<_, Coins>()?,
+            next: parser.parse_as::<_, Option<Ref>>()?,
+        })
+    }
+}
+
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, strum::Display, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum DedustPoolType {
     /// volatile$0 = PoolType;
@@ -243,4 +275,30 @@ impl BitUnpack for PoolParams {
             assets: reader.unpack()?,
         })
     }
+}
+
+#[serde_as]
+#[derive(Debug, Clone, Deserialize)]
+#[autoimpl(PartialEq ignore self.r#type, self.trade_fee, self.assets)]
+#[autoimpl(Eq)]
+#[autoimpl(Hash ignore self.r#type, self.trade_fee, self.assets)]
+#[serde(rename_all = "camelCase")]
+pub struct DedustPool {
+    pub address: MsgAddress,
+    #[serde_as(as = "DisplayFromStr")]
+    pub r#type: DedustPoolType,
+    pub assets: [DedustAsset; 2],
+    #[serde_as(as = "DisplayFromStr")]
+    pub trade_fee: f64,
+    #[serde_as(as = "[DisplayFromStr; 2]")]
+    pub reserves: [BigUint; 2],
+}
+
+impl DedustPool {
+    // fn amount_in_with_fee(&self, amount_in: BigUint) -> BigUint {}
+
+    // pub fn estimate_swap_out(&self, amount_in: BigUint) -> BigUint {
+    //     // let amount_in_with_fee = amount_in * self.trade_fee
+    //     let amount_in_with_fee = amount_in * (self.trade_fee / 100.0).into();
+    // }
 }

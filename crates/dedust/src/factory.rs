@@ -2,7 +2,10 @@ use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use hex_literal::hex;
-use tlb::Data;
+use tlb::{
+    BitReaderExt, BitWriterExt, CellBuilder, CellBuilderError, CellDeserialize, CellParser,
+    CellParserError, CellSerialize, ConstU32, Data,
+};
 use tlb_ton::MsgAddress;
 
 use crate::{DedustAsset, DedustPoolType};
@@ -72,3 +75,59 @@ pub trait DedustFactoryI: TonContractI {
 }
 
 impl<C> DedustFactoryI for C where C: TonContractI {}
+
+const FACTORY_CREATE_VAULT_TAG: u32 = 0x21cfe02b;
+
+/// create_vault#21cfe02b query_id:uint64 asset:Asset = InMsgBody;
+pub struct DedustFactoryCreateVault {
+    pub query_id: u64,
+    pub asset: DedustAsset,
+}
+
+impl CellSerialize for DedustFactoryCreateVault {
+    fn store(&self, builder: &mut CellBuilder) -> Result<(), CellBuilderError> {
+        builder
+            .pack(FACTORY_CREATE_VAULT_TAG)?
+            .pack(self.query_id)?
+            .pack(&self.asset)?;
+        Ok(())
+    }
+}
+
+impl<'de> CellDeserialize<'de> for DedustFactoryCreateVault {
+    fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
+        parser.unpack::<ConstU32<FACTORY_CREATE_VAULT_TAG>>()?;
+        Ok(Self {
+            query_id: parser.unpack()?,
+            asset: parser.unpack()?,
+        })
+    }
+}
+
+const FACTORY_CREATE_VOLATILE_POOL_TAG: u32 = 0x97d51f2f;
+
+/// create_volatile_pool#97d51f2f query_id:uint64 asset0:Asset asset1:Asset = InMsgBody;
+pub struct DedustFactoryCreateVolalitePool {
+    pub query_id: u64,
+    pub assets: [DedustAsset; 2],
+}
+
+impl CellSerialize for DedustFactoryCreateVolalitePool {
+    fn store(&self, builder: &mut CellBuilder) -> Result<(), CellBuilderError> {
+        builder
+            .pack(FACTORY_CREATE_VOLATILE_POOL_TAG)?
+            .pack(self.query_id)?
+            .pack(&self.assets)?;
+        Ok(())
+    }
+}
+
+impl<'de> CellDeserialize<'de> for DedustFactoryCreateVolalitePool {
+    fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
+        parser.unpack::<ConstU32<FACTORY_CREATE_VOLATILE_POOL_TAG>>()?;
+        Ok(Self {
+            query_id: parser.unpack()?,
+            assets: parser.unpack()?,
+        })
+    }
+}
