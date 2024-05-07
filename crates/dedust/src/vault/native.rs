@@ -5,7 +5,7 @@ use tlb::{
 };
 use tlb_ton::Coins;
 
-use crate::{PoolParams, SwapParams};
+use crate::{PoolParams, SwapParams, SwapStep};
 
 const NATIVE_VAULT_SWAP_TAG: u32 = 0xea06185d;
 
@@ -13,6 +13,7 @@ const NATIVE_VAULT_SWAP_TAG: u32 = 0xea06185d;
 pub struct DedustNativeVaultSwap<F, R> {
     pub query_id: u64,
     pub amount: BigUint,
+    pub step: SwapStep,
     pub params: SwapParams<F, R>,
 }
 
@@ -26,6 +27,7 @@ where
             .pack(NATIVE_VAULT_SWAP_TAG)?
             .pack(self.query_id)?
             .pack_as::<_, &Coins>(&self.amount)?
+            .store(&self.step)?
             .store(&self.params)?;
         Ok(())
     }
@@ -41,6 +43,7 @@ where
         Ok(Self {
             query_id: parser.unpack()?,
             amount: parser.unpack_as::<_, Coins>()?,
+            step: parser.parse()?,
             params: parser.parse()?,
         })
     }
