@@ -1,2 +1,4 @@
 target/
 mnemonic.txt
+*.pyc
+.DS_STORE
