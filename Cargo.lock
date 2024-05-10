@@ -3,29 +3,46 @@
 version = 3
 
 [[package]]
+name = "aceton"
+version = "0.1.0"
+dependencies = [
+ "aceton-arbitrage",
+ "aceton-dedust",
+ "anyhow",
+ "serde",
+ "serde_with",
+ "tonlibjson-client",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "aceton-arbitrage"
 version = "0.1.0"
 dependencies = [
  "aceton-core",
- "aceton-dedust",
+ "aceton-graph",
  "anyhow",
+ "fraction",
  "impl-tools",
  "itertools",
  "num-bigint",
  "num-traits",
  "petgraph",
+ "serde",
+ "serde_with",
  "tlb-ton",
  "tonlibjson-client",
  "tonlibjson-sys",
  "tracing",
+ "url",
 ]
 
 [[package]]
 name = "aceton-cli"
 version = "0.1.0"
 dependencies = [
- "aceton-arbitrage",
- "aceton-dedust",
+ "aceton",
  "anyhow",
  "clap",
  "futures",
@@ -36,7 +53,7 @@ dependencies = [
  "opentelemetry_sdk",
  "reqwest 0.12.4",
  "tokio",
- "tonlibjson-client",
+ "toml",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",
@@ -52,20 +69,25 @@ dependencies = [
  "base64 0.21.7",
  "bitvec",
  "num-bigint",
+ "serde",
+ "serde_with",
  "thiserror",
  "tlb",
  "tlb-ton",
  "tonlibjson-client",
+ "url",
 ]
 
 [[package]]
 name = "aceton-dedust"
 version = "0.1.0"
 dependencies = [
+ "aceton-arbitrage",
  "aceton-core",
  "anyhow",
  "async-trait",
  "base64 0.21.7",
+ "fraction",
  "hex-literal",
  "impl-tools",
  "num-bigint",
@@ -77,6 +99,13 @@ dependencies = [
  "tlb-ton",
  "tonlibjson-client",
  "url",
+]
+
+[[package]]
+name = "aceton-graph"
+version = "0.1.0"
+dependencies = [
+ "petgraph",
 ]
 
 [[package]]
@@ -693,6 +722,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
+]
+
+[[package]]
+name = "fraction"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fac69bd85b6b19696fae3aa269c3e03c2d12e19a87f0e67f01bc1518cf0025e0"
+dependencies = [
+ "lazy_static",
+ "num",
 ]
 
 [[package]]
@@ -1437,6 +1476,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "num"
+version = "0.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3135b08af27d103b0a51f2ae0f8632117b7b185ccf931445affa8df530576a41"
+dependencies = [
+ "num-bigint",
+ "num-complex",
+ "num-integer",
+ "num-iter",
+ "num-rational",
+ "num-traits",
+]
+
+[[package]]
 name = "num-bigint"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1444,6 +1497,15 @@ checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
 dependencies = [
  "autocfg",
  "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-complex"
+version = "0.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23c6602fda94a57c990fe0df199a035d83576b496aa29f4e634a8ac6004e68a6"
+dependencies = [
  "num-traits",
 ]
 
@@ -1459,6 +1521,29 @@ version = "0.1.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7969661fd2958a5cb096e56c8e1ad0444ac2bbcd0061bd28660485a44879858f"
 dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "num-iter"
+version = "0.1.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1429034a0490724d0075ebb2bc9e875d6503c3cf69e235a8941aa757d83ef5bf"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
+name = "num-rational"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
+dependencies = [
+ "autocfg",
+ "num-bigint",
+ "num-integer",
  "num-traits",
 ]
 
@@ -2178,6 +2263,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_spanned"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eb3622f419d1296904700073ea6cc23ad690adbd66f13ea683df73298736f0c1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2479,9 +2573,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b7f0de0f7e2585e3396a8a84495bf4c1dd3286e11ad9ec6f35f1ff8adb126cc"
+checksum = "1bab8aad23f0b260c1da08e7c99500169ebb092a8547b7f54f81c7ece6c5353a"
 dependencies = [
  "bitvec",
  "either",
@@ -2493,14 +2587,17 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fd119990e2a8ac36cc4b4d36b9b97e923d9288b4f53fef8e1265d1a889e78f2"
+checksum = "2fc6889c24b35710dcac93f718d519d1946ece75a51cb0a245c17a6760bac2b0"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
  "crc",
+ "either",
  "hex",
+ "impl-tools",
+ "num-bigint",
  "serde_with",
  "strum 0.25.0",
  "tlb",
@@ -2509,9 +2606,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.5"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8a01abfbc52ab390106b8ac13edab44bef2400321c5c3e9fff992f266457910e"
+checksum = "9307732091ec7f771dea6c50c29ba19246884fda21314b6d1cb4db3d3893ac14"
 dependencies = [
  "bitvec",
  "either",
@@ -2615,6 +2712,40 @@ dependencies = [
  "pin-project-lite",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "toml"
+version = "0.8.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9dd1545e8208b4a5af1aa9bbd0b4cf7e9ea08fabc5d0a5c67fcaafa17433aa3"
+dependencies = [
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "toml_edit",
+]
+
+[[package]]
+name = "toml_datetime"
+version = "0.6.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3550f4e9685620ac18a50ed434eb3aec30db8ba93b0287467bca5826ea25baf1"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "toml_edit"
+version = "0.22.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3328d4f68a705b2a4498da1d580585d39a6510f98318a2cec3018a7ec61ddef"
+dependencies = [
+ "indexmap 2.2.6",
+ "serde",
+ "serde_spanned",
+ "toml_datetime",
+ "winnow",
 ]
 
 [[package]]
@@ -3196,6 +3327,15 @@ name = "windows_x86_64_msvc"
 version = "0.52.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32b752e52a2da0ddfbdbcc6fceadfeede4c939ed16d13e648833a61dfb611ed8"
+
+[[package]]
+name = "winnow"
+version = "0.6.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3c52e9c97a68071b23e836c9380edae937f17b9c4667bd021973efc689f618d"
+dependencies = [
+ "memchr",
+]
 
 [[package]]
 name = "winreg"

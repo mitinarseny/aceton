@@ -1,8 +1,9 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
+use fraction::Decimal;
 use impl_tools::autoimpl;
 use num_bigint::BigUint;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::EnumString;
 use tlb::{
@@ -11,21 +12,22 @@ use tlb::{
 };
 use tlb_ton::{Coins, MsgAddress};
 
+use aceton_arbitrage::{Asset, AssetWithMetadata, DexPool};
 use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
 
 use crate::DedustAsset;
 
 #[async_trait]
 pub trait DedustPoolI: TonContractI {
-    async fn get_assets(&self) -> anyhow::Result<[DedustAsset; 2]> {
+    async fn get_assets(&self) -> anyhow::Result<[Asset; 2]> {
         let [asset0, asset1] = self
             .get("get_assets", [].into())
             .await??
             .try_into()
             .map_err(|stack| anyhow!("invalid output stack size: {stack:?}"))?;
 
-        let asset0 = asset0.parse_cell_fully_as::<_, Data>()?;
-        let asset1 = asset1.parse_cell_fully_as::<_, Data>()?;
+        let asset0 = asset0.parse_cell_fully_as::<_, Data<DedustAsset>>()?;
+        let asset1 = asset1.parse_cell_fully_as::<_, Data<DedustAsset>>()?;
 
         Ok([asset0, asset1])
     }
@@ -55,14 +57,14 @@ pub trait DedustPoolI: TonContractI {
 
     async fn estimate_swap_out(
         &self,
-        asset_in: DedustAsset,
+        asset_in: Asset,
         amount_in: BigUint,
     ) -> anyhow::Result<EstimateSwapOutResult> {
         let [asset_out, amount_out, trade_fee] = self
             .get(
                 "estimate_swap_out",
                 [
-                    TvmBoxedStackEntryExt::store_cell_as::<_, Data>(asset_in)?,
+                    TvmBoxedStackEntryExt::store_cell_as::<_, Data<DedustAsset>>(asset_in)?,
                     TvmBoxedStackEntryExt::from_number(amount_in),
                 ]
                 .into(),
@@ -71,7 +73,7 @@ pub trait DedustPoolI: TonContractI {
             .try_into()
             .map_err(|stack| anyhow!("invalid output stack: {stack:?}"))?;
         Ok(EstimateSwapOutResult {
-            asset_out: asset_out.parse_cell_fully_as::<_, Data>()?,
+            asset_out: asset_out.parse_cell_fully_as::<_, Data<DedustAsset>>()?,
             amount_out: amount_out.into_number()?,
             trade_fee: trade_fee.into_number()?,
         })
@@ -81,7 +83,7 @@ pub trait DedustPoolI: TonContractI {
 impl<C> DedustPoolI for C where C: TonContractI {}
 
 pub struct EstimateSwapOutResult {
-    pub asset_out: DedustAsset,
+    pub asset_out: Asset,
     /// amount of asset_out
     pub amount_out: BigUint,
     /// amount of asset_in asset given as a fee
@@ -252,7 +254,7 @@ impl BitUnpack for DedustPoolType {
 /// pool_params#_ pool_type:PoolType asset0:Asset asset1:Asset = PoolParams;
 pub struct PoolParams {
     pub r#type: DedustPoolType,
-    pub assets: [DedustAsset; 2],
+    pub assets: [Asset; 2],
 }
 
 impl BitPack for PoolParams {
@@ -260,7 +262,9 @@ impl BitPack for PoolParams {
     where
         W: BitWriter,
     {
-        writer.pack(self.r#type)?.pack(&self.assets)?;
+        writer
+            .pack(self.r#type)?
+            .pack_many_as::<_, &DedustAsset>(&self.assets)?;
         Ok(())
     }
 }
@@ -272,7 +276,7 @@ impl BitUnpack for PoolParams {
     {
         Ok(Self {
             r#type: reader.unpack()?,
-            assets: reader.unpack()?,
+            assets: reader.unpack_as::<_, [DedustAsset; 2]>()?,
         })
     }
 }
@@ -287,18 +291,27 @@ pub struct DedustPool {
     pub address: MsgAddress,
     #[serde_as(as = "DisplayFromStr")]
     pub r#type: DedustPoolType,
-    pub assets: [DedustAsset; 2],
+    pub assets: [AssetWithMetadata; 2],
     #[serde_as(as = "DisplayFromStr")]
-    pub trade_fee: f64,
+    pub trade_fee: Decimal,
     #[serde_as(as = "[DisplayFromStr; 2]")]
     pub reserves: [BigUint; 2],
 }
 
-impl DedustPool {
-    // fn amount_in_with_fee(&self, amount_in: BigUint) -> BigUint {}
+impl DexPool for DedustPool {
+    fn assets(&self) -> [Asset; 2] {
+        let (a0, a1) = (self.assets[0].asset, self.assets[1].asset);
+        [a0, a1].map(Into::into)
+    }
 
-    // pub fn estimate_swap_out(&self, amount_in: BigUint) -> BigUint {
-    //     // let amount_in_with_fee = amount_in * self.trade_fee
-    //     let amount_in_with_fee = amount_in * (self.trade_fee / 100.0).into();
-    // }
+    fn reserves(&self) -> [&BigUint; 2] {
+        let [ref r0, ref r1] = &self.reserves;
+        [r0, r1]
+    }
+
+    fn trade_fees(&self) -> [Decimal; 2] {
+        [Decimal::from(1) - (self.trade_fee / 100), 1.into()]
+    }
+
+    // TODO: pool type
 }

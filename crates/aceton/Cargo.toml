@@ -1,18 +1,15 @@
 [package]
-name = "aceton-core"
+name = "aceton"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
+aceton-arbitrage.workspace = true
+aceton-dedust.workspace = true
+
 anyhow.workspace = true
-async-trait.workspace = true
-base64.workspace = true
-bitvec.workspace = true
-num-bigint.workspace = true
 serde.workspace = true
 serde_with.workspace = true
-thiserror.workspace = true
-tlb.workspace = true
-tlb-ton.workspace = true
 tonlibjson-client.workspace = true
+tracing.workspace = true
 url.workspace = true

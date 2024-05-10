@@ -5,10 +5,12 @@ edition.workspace = true
 
 [dependencies]
 aceton-core.workspace = true
+aceton-arbitrage.workspace = true
 
 anyhow.workspace = true
 async-trait.workspace = true
 base64.workspace = true
+fraction.workspace = true
 hex-literal.workspace = true
 impl-tools.workspace = true
 num-bigint.workspace = true

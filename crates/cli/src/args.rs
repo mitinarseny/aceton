@@ -1,13 +1,15 @@
-use core::time::Duration;
-use std::io::{self, IsTerminal};
+use std::{
+    io::{self, IsTerminal},
+    path::PathBuf,
+};
 
-use anyhow::{anyhow, Context};
-use clap::{Args, Parser};
+use anyhow::Context;
+use clap::{Args, Parser, ValueHint};
 use lazy_static::lazy_static;
 use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::Resource;
-use tonlibjson_client::ton::TonClientBuilder;
+use tokio::fs;
 use tracing::{level_filters::LevelFilter, Level, Subscriber};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
@@ -16,28 +18,21 @@ use tracing_subscriber::{
     registry::LookupSpan,
     Layer, Registry,
 };
-use url::Url;
+
+use aceton::config::AcetonConfig;
 
 use crate::metrics::MetricsFilter;
 
 #[derive(Parser)]
 pub struct CliArgs {
     #[arg(
-        long,
+        short, long,
         value_parser,
-        value_name = "URI",
-        default_value = "https://ton.org/global-config.json"
+        value_hint = ValueHint::FilePath,
+        value_name = "FILE",
+        default_value_os_t = PathBuf::from("./aceton.toml"),
     )]
-    /// TON config URI,
-    pub ton_config: Url,
-    // #[arg(
-    //     short, long,
-    //     value_parser,
-    //     value_hint = ValueHint::FilePath,
-    //     value_name = "FILE",
-    //     default_value_os_t = PathBuf::from("./aceton.toml"),
-    // )]
-    // config: PathBuf,
+    config: PathBuf,
 
     // #[arg(
     //     short, long,
@@ -52,19 +47,9 @@ pub struct CliArgs {
 }
 
 impl CliArgs {
-    pub fn ton_config(&self) -> anyhow::Result<TonClientBuilder> {
-        Ok(match self.ton_config.scheme() {
-            "http" | "https" => {
-                TonClientBuilder::from_config_url(self.ton_config.clone(), Duration::from_secs(60))
-            }
-            "file" => TonClientBuilder::from_config_path(
-                self.ton_config
-                    .to_file_path()
-                    .ok()
-                    .context("invalid file path")?,
-            ),
-            _ => return Err(anyhow!("invalid TON config URL: {}", self.ton_config)),
-        })
+    pub async fn config(&self) -> anyhow::Result<AcetonConfig> {
+        let contents = fs::read_to_string(&self.config).await.context("read")?;
+        toml::from_str(&contents).context("TOML")
     }
 }
 

@@ -1,16 +1,10 @@
-use impl_tools::autoimpl;
-use num_bigint::BigUint;
 use reqwest::Client;
-use serde::Deserialize;
-use serde_with::serde_as;
-use serde_with::DisplayFromStr;
-use tlb_ton::MsgAddress;
 
 use crate::DedustPool;
-use crate::{DedustAsset, DedustPoolType};
 
 const BASE_URL: &str = "https://api.dedust.io/v2";
 
+#[derive(Default)]
 pub struct DedustHTTPClient {
     client: Client,
 }

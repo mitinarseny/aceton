@@ -5,15 +5,19 @@ edition.workspace = true
 
 [dependencies]
 aceton-core.workspace = true
-aceton-dedust.workspace = true
+aceton-graph.workspace = true
 
 anyhow.workspace = true
+fraction.workspace = true
 impl-tools.workspace = true
 itertools.workspace = true
 num-bigint.workspace = true
 num-traits.workspace = true
-petgraph = "0.6"
+petgraph.workspace = true
+serde.workspace = true
+serde_with.workspace = true
 tlb-ton.workspace = true
 tonlibjson-client.workspace = true
 tonlibjson-sys.workspace = true
 tracing.workspace = true
+url.workspace = true

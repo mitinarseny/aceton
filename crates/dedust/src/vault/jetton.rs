@@ -1,7 +1,7 @@
 use num_bigint::BigUint;
 use tlb::{
     BitReaderExt, BitWriterExt, CellBuilder, CellBuilderError, CellDeserialize, CellParser,
-    CellParserError, CellSerialize, ConstU32, Error, Ref,
+    CellParserError, CellSerialize, ConstU32, Ref,
 };
 use tlb_ton::Coins;
 
