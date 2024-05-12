@@ -13,6 +13,7 @@ lazy_static.workspace = true
 reqwest.workspace = true
 tokio.workspace = true
 toml = "0.8"
+ton-contracts.workspace = true
 url.workspace = true
 
 opentelemetry = "0.22"

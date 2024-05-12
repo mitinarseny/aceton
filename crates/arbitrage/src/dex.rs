@@ -16,10 +16,11 @@ pub trait Dex {
 
     async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<()>;
 
-    fn make_message(
+    async fn make_message(
         &self,
+        query_id: u64,
         asset_in: Asset,
         amount_in: BigUint,
         steps: <Self::Pool as DexPool>::Step,
-    ) -> Message;
+    ) -> anyhow::Result<Message>;
 }

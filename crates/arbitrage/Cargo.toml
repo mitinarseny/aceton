@@ -20,5 +20,6 @@ serde_with.workspace = true
 tlb-ton.workspace = true
 tonlibjson-client.workspace = true
 tonlibjson-sys.workspace = true
+ton-contracts.workspace = true
 tracing.workspace = true
 url.workspace = true

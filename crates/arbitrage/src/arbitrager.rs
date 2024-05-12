@@ -1,6 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
+    sync::atomic::{AtomicU64, Ordering},
 };
 
 use aceton_graph::NegativeCycles;
@@ -15,6 +16,7 @@ use petgraph::{
     Directed, Graph,
 };
 use tlb_ton::Message;
+use ton_contracts::{v4r2::V4R2, Wallet};
 use tracing::{info, instrument, warn};
 
 use crate::{ArbitragerConfig, Asset, Dex, DexPool, SwapPath};
@@ -30,6 +32,9 @@ where
     dex: D,
     g: G<D>,
     asset2index: HashMap<Asset, NodeIndex>,
+    query_id: AtomicU64,
+
+    wallet: Wallet<V4R2>,
 }
 
 impl<D> Arbitrager<D>
@@ -38,27 +43,29 @@ where
     D::Pool: Clone,
 {
     #[instrument(skip_all)]
-    pub async fn new(cfg: ArbitragerConfig, dex: D) -> anyhow::Result<Self> {
+    pub async fn new(cfg: ArbitragerConfig, dex: D, wallet: Wallet<V4R2>) -> anyhow::Result<Self> {
         let base_asset = cfg.base_asset;
-        info!("getting DEX pools...");
+        info!("resolving DEX pools...");
         let pools = dex.get_pools().await.context("DEX")?;
-        info!("got {} pools", pools.len());
+
         let mut s = Self {
             cfg,
             dex,
             g: Graph::new(),
             asset2index: Default::default(),
+            query_id: Default::default(),
+            wallet,
         };
-        info!("building graph from {} pools...", pools.len());
+        info!(pools_count = pools.len(), "building DEX graph...");
         s.add_asset(base_asset);
         s.add_pools(pools);
         info!("removing branches...");
         // s.remove_branches();
         s.g.shrink_to_fit();
         info!(
-            "graph ready: {} assets, {} directed pools",
-            s.asset_count(),
-            s.directed_pool_count(),
+            asset_count = s.asset_count(),
+            directed_pool_count = s.directed_pool_count(),
+            "DEX graph ready",
         );
         Ok(s)
     }
@@ -107,7 +114,11 @@ where
         self.g.retain_nodes(|_, node| keep.contains(&node))
     }
 
-    fn make_message(&self, amount_in: BigUint, path: SwapPath<&D::Pool>) -> Message {
+    async fn make_message(
+        &self,
+        amount_in: BigUint,
+        path: SwapPath<&D::Pool>,
+    ) -> anyhow::Result<Message> {
         let pools: Vec<_> = path.iter_pools().collect();
         let mut next = None;
         for pool in pools[1..].into_iter().rev() {
@@ -116,7 +127,14 @@ where
         // TODO: amount_out_min
         let root = pools[0].make_step(None, next);
 
-        self.dex.make_message(self.cfg.base_asset, amount_in, root)
+        self.dex
+            .make_message(
+                self.query_id.fetch_add(1, Ordering::SeqCst),
+                self.cfg.base_asset,
+                amount_in,
+                root,
+            )
+            .await
     }
 
     fn filter_pools(
@@ -167,12 +185,11 @@ where
         let amount_in: BigUint = TON.clone() * 10u32;
 
         info!(
-            "looking for profitable cycles from base asset: {}",
-            self.cfg.base_asset
+            base_asset = %self.cfg.base_asset,
+            "looking for profitable cycles...",
         );
 
         loop {
-            // info!("loop");
             info!("updating pools reserves...");
             self.update_pools().await?;
             info!("pools updated!");
@@ -180,12 +197,8 @@ where
 
             let profitable_cycles = self.profitable_cycles(&filtered_pools);
 
-            let Some(cycle) = profitable_cycles
-                // .inspect(|cycle| {
-                //     let amount_out = cycle.estimate_swap_out(amount_in.clone());
-                //     info!("cycle candidate (out {}): {}", amount_out, cycle);
-                // })
-                .max_by_key(|cycle| cycle.estimate_swap_out(amount_in.clone()))
+            let Some(cycle) =
+                profitable_cycles.max_by_key(|cycle| cycle.estimate_swap_out(amount_in.clone()))
             else {
                 warn!("no profitable cycles by rate");
                 continue;
@@ -199,11 +212,15 @@ where
             let profit = &amount_out - &amount_in;
             let profit_rate = Ratio::new(profit, amount_in.clone()).to_f64().unwrap();
             info!(
-                "most profit: {:.2}%, out: {}, cycle: {}",
-                profit_rate * 100.0,
-                amount_out,
-                cycle
+                profit_rate_percent = profit_rate * 100.0,
+                %amount_out,
+                %cycle,
+                "found most profiting cycle",
             );
+            info!(
+                message = ?self.make_message(amount_in.clone(), cycle).await?,
+                "message ready"
+            )
         }
     }
 

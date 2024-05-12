@@ -19,8 +19,9 @@ async fn run(args: CliArgs) -> anyhow::Result<()> {
     args.logging.make_subscriber()?.try_init()?;
 
     let cfg = args.config().await.context("config")?;
+    let key_pair = args.key_pair().await.context("secret")?;
 
-    let app = Aceton::new(cfg).await?;
+    let app = Aceton::new(cfg, key_pair).await?;
 
     app.run().await?;
 

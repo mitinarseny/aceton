@@ -1,17 +1,8 @@
-use std::{
-    borrow::Cow,
-    fmt::Display,
-    marker::PhantomData,
-    ops::{Div, DivAssign},
-    str::FromStr,
-};
+use std::{borrow::Cow, fmt::Display, marker::PhantomData, ops::Div};
 
-use num::{pow::Pow, rational::Ratio, BigUint, FromPrimitive, Integer, Num};
-use serde::{
-    de::{self, Expected, Unexpected},
-    Deserialize, Deserializer,
-};
-use serde_with::{DeserializeAs, DisplayFromStr, Same};
+use num::{pow::Pow, rational::Ratio, Integer, Num};
+use serde::{de, Deserialize, Deserializer};
+use serde_with::{DeserializeAs, Same};
 
 pub struct Percent<T = Same>(PhantomData<T>);
 
