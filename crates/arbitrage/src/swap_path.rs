@@ -3,8 +3,9 @@ use core::{
     iter,
 };
 
-use fraction::BigUint;
-use itertools::unfold;
+use itertools::{unfold, FoldWhile, Itertools};
+use num::BigUint;
+use tlb_ton::Message;
 
 use crate::{Asset, DexPool};
 
@@ -30,8 +31,8 @@ where
         self.pool.asset_out(self.asset_in)
     }
 
-    pub fn estimate_swap_out(&self, amount_in: BigUint) -> BigUint {
-        self.pool.estimate_swap_out(self.asset_in, amount_in)
+    pub fn estimate_swap_out(&self, amount_in: &BigUint) -> BigUint {
+        self.pool.estimate_swap_out(self.asset_in, &amount_in)
     }
 }
 
@@ -115,9 +116,15 @@ where
     }
 
     pub fn estimate_swap_out(&self, amount_in: BigUint) -> BigUint {
-        self.iter_steps().fold(amount_in, |amount_in, step| {
-            step.estimate_swap_out(amount_in)
-        })
+        self.iter_steps()
+            .fold_while(amount_in, |amount_in, step| {
+                let amount_out = step.estimate_swap_out(&amount_in);
+                if amount_out == BigUint::ZERO {
+                    return FoldWhile::Done(amount_out);
+                }
+                FoldWhile::Continue(amount_out)
+            })
+            .into_inner()
     }
 
     pub fn optimal_amount_in(&self) -> BigUint {

@@ -8,12 +8,13 @@ aceton-core.workspace = true
 aceton-graph.workspace = true
 
 anyhow.workspace = true
-fraction.workspace = true
+async-trait.workspace = true
+futures.workspace = true
 impl-tools.workspace = true
 itertools.workspace = true
-num-bigint.workspace = true
-num-traits.workspace = true
+num.workspace = true
 petgraph.workspace = true
+reqwest.workspace = true
 serde.workspace = true
 serde_with.workspace = true
 tlb-ton.workspace = true

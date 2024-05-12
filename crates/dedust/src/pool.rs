@@ -1,8 +1,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
-use fraction::Decimal;
 use impl_tools::autoimpl;
-use num_bigint::BigUint;
+use num::{rational::Ratio, traits::ConstZero, BigUint};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::EnumString;
@@ -14,6 +13,7 @@ use tlb_ton::{Coins, MsgAddress};
 
 use aceton_arbitrage::{Asset, AssetWithMetadata, DexPool};
 use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
+use aceton_utils::{DecimalFloatStrAsRatio, Percent};
 
 use crate::DedustAsset;
 
@@ -292,13 +292,15 @@ pub struct DedustPool {
     #[serde_as(as = "DisplayFromStr")]
     pub r#type: DedustPoolType,
     pub assets: [AssetWithMetadata; 2],
-    #[serde_as(as = "DisplayFromStr")]
-    pub trade_fee: Decimal,
+    #[serde_as(as = "DecimalFloatStrAsRatio")]
+    pub trade_fee: Ratio<BigUint>,
     #[serde_as(as = "[DisplayFromStr; 2]")]
     pub reserves: [BigUint; 2],
 }
 
 impl DexPool for DedustPool {
+    type Step = SwapStep;
+
     fn assets(&self) -> [Asset; 2] {
         let (a0, a1) = (self.assets[0].asset, self.assets[1].asset);
         [a0, a1].map(Into::into)
@@ -309,9 +311,22 @@ impl DexPool for DedustPool {
         [r0, r1]
     }
 
-    fn trade_fees(&self) -> [Decimal; 2] {
-        [Decimal::from(1) - (self.trade_fee / 100), 1.into()]
+    // TODO: pool type
+    fn trade_fees(&self) -> [Ratio<BigUint>; 2] {
+        [
+            Ratio::from_integer(BigUint::from(1u32)) - &self.trade_fee / BigUint::from(100u32),
+            Ratio::from_integer(1u32.into()),
+        ]
     }
 
-    // TODO: pool type
+    fn make_step(&self, amount_out_min: Option<BigUint>, next: Option<Self::Step>) -> Self::Step {
+        SwapStep {
+            pool: self.address,
+            params: SwapStepParams {
+                kind: SwapKind::GivenIn,
+                limit: amount_out_min.unwrap_or(BigUint::ZERO),
+                next: next.map(Box::new),
+            },
+        }
+    }
 }

@@ -1,40 +1,44 @@
 pub mod config;
 
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 
 use aceton_arbitrage::Arbitrager;
-use aceton_dedust::{api::DedustHTTPClient, DedustPool};
+use aceton_dedust::{api::DedustHTTPClient, DeDust, DedustPool, DedustPoolType};
 use anyhow::Context;
+use tonlibjson_client::ton::{TonClient, TonClientBuilder};
 use tracing::info;
 
 use self::config::AcetonConfig;
 
 pub struct Aceton {
-    arbitrager: Arbitrager<Arc<DedustPool>>,
+    arbitrager: Arbitrager<DeDust>,
 }
 
 impl Aceton {
     pub async fn new(cfg: AcetonConfig) -> anyhow::Result<Self> {
-        let mut arbitrager = Arbitrager::new(cfg.arbitrage);
+        let http_client = reqwest::Client::new();
 
-        info!("getting DeDust pools...");
-        let dedust_pools = DedustHTTPClient::default()
-            .get_available_pools()
-            .await
-            .context("DeDust HTTP API")?;
-        info!("DeDust pools: {}", dedust_pools.len());
-        arbitrager.add_pools(dedust_pools.into_iter().map(Arc::new));
+        info!("creating TON client...");
+        let mut ton_client =
+            TonClientBuilder::from_config_url(cfg.ton.config, Duration::from_secs(60))
+                .build()
+                .await?;
+        info!("TON client created, waiting for ready...");
+        ton_client.ready().await?;
+        info!("TOM client ready");
 
-        // let mut ton = args.ton_config()?.build().await?;
-        // info!("initializing TON client...");
-        // ton.ready().await?;
-        // info!("TON client is ready");
+        let arbitrager =
+            Arbitrager::new(cfg.arbitrage, DeDust::new(ton_client, http_client)).await?;
 
         Ok(Self { arbitrager })
     }
 
     pub async fn run(mut self) -> anyhow::Result<()> {
-        self.arbitrager.run()
+        self.arbitrager.run().await
+        // let http_client = reqwest::Client::new();
+        // let arbitrager = Arbitrager::new(self.cfg.arbitrage, DeDust::new(http_client)).await?;
+        // arbitrager.run()
+
         // let txs = ton
         //     .raw_get_transactions(
         //         "EQCEho8oSvzVneM-q3ALV9GMOoRzlGNwrGtq4p2x3SnInMVA",

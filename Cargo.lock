@@ -9,6 +9,7 @@ dependencies = [
  "aceton-arbitrage",
  "aceton-dedust",
  "anyhow",
+ "reqwest 0.12.4",
  "serde",
  "serde_with",
  "tonlibjson-client",
@@ -23,12 +24,13 @@ dependencies = [
  "aceton-core",
  "aceton-graph",
  "anyhow",
- "fraction",
+ "async-trait",
+ "futures",
  "impl-tools",
  "itertools",
- "num-bigint",
- "num-traits",
+ "num",
  "petgraph",
+ "reqwest 0.12.4",
  "serde",
  "serde_with",
  "tlb-ton",
@@ -68,7 +70,7 @@ dependencies = [
  "async-trait",
  "base64 0.21.7",
  "bitvec",
- "num-bigint",
+ "num",
  "serde",
  "serde_with",
  "thiserror",
@@ -84,13 +86,13 @@ version = "0.1.0"
 dependencies = [
  "aceton-arbitrage",
  "aceton-core",
+ "aceton-utils",
  "anyhow",
  "async-trait",
  "base64 0.21.7",
- "fraction",
  "hex-literal",
  "impl-tools",
- "num-bigint",
+ "num",
  "reqwest 0.12.4",
  "serde",
  "serde_with",
@@ -98,6 +100,7 @@ dependencies = [
  "tlb",
  "tlb-ton",
  "tonlibjson-client",
+ "tracing",
  "url",
 ]
 
@@ -105,7 +108,17 @@ dependencies = [
 name = "aceton-graph"
 version = "0.1.0"
 dependencies = [
+ "impl-tools",
  "petgraph",
+]
+
+[[package]]
+name = "aceton-utils"
+version = "0.1.0"
+dependencies = [
+ "num",
+ "serde",
+ "serde_with",
 ]
 
 [[package]]
@@ -722,16 +735,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fraction"
-version = "0.15.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fac69bd85b6b19696fae3aa269c3e03c2d12e19a87f0e67f01bc1518cf0025e0"
-dependencies = [
- "lazy_static",
- "num",
 ]
 
 [[package]]
@@ -1477,9 +1480,9 @@ dependencies = [
 
 [[package]]
 name = "num"
-version = "0.4.2"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3135b08af27d103b0a51f2ae0f8632117b7b185ccf931445affa8df530576a41"
+checksum = "35bd024e8b2ff75562e5f34e7f4905839deb4b22955ef5e73d2fea1b9813cb23"
 dependencies = [
  "num-bigint",
  "num-complex",
@@ -1491,20 +1494,19 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.4"
+version = "0.4.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
+checksum = "c165a9ab64cf766f73521c0dd2cfdff64f488b8f0b3e621face3462d3db536d7"
 dependencies = [
- "autocfg",
  "num-integer",
  "num-traits",
 ]
 
 [[package]]
 name = "num-complex"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "23c6602fda94a57c990fe0df199a035d83576b496aa29f4e634a8ac6004e68a6"
+checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
  "num-traits",
 ]
@@ -1537,11 +1539,10 @@ dependencies = [
 
 [[package]]
 name = "num-rational"
-version = "0.4.1"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
+checksum = "f83d14da390562dca69fc84082e73e548e1ad308d24accdedd2720017cb37824"
 dependencies = [
- "autocfg",
  "num-bigint",
  "num-integer",
  "num-traits",
@@ -1549,9 +1550,9 @@ dependencies = [
 
 [[package]]
 name = "num-traits"
-version = "0.2.18"
+version = "0.2.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da0df0e5185db44f69b44f26786fe401b6c293d1907744beaa7fa62b2e5a517a"
+checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
 ]

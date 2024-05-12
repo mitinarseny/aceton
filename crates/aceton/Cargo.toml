@@ -8,6 +8,7 @@ aceton-arbitrage.workspace = true
 aceton-dedust.workspace = true
 
 anyhow.workspace = true
+reqwest.workspace = true
 serde.workspace = true
 serde_with.workspace = true
 tonlibjson-client.workspace = true

@@ -1,4 +1,4 @@
-use num_bigint::BigUint;
+use num::BigUint;
 use tlb::{
     BitReaderExt, BitWriterExt, CellBuilder, CellBuilderError, CellDeserialize, CellParserError,
     CellSerialize, ConstU32, Ref,
@@ -28,7 +28,7 @@ where
             .pack(self.query_id)?
             .pack_as::<_, &Coins>(&self.amount)?
             .store(&self.step)?
-            .store(&self.params)?;
+            .store_as::<_, Ref>(&self.params)?;
         Ok(())
     }
 }
@@ -44,7 +44,7 @@ where
             query_id: parser.unpack()?,
             amount: parser.unpack_as::<_, Coins>()?,
             step: parser.parse()?,
-            params: parser.parse()?,
+            params: parser.parse_as::<_, Ref>()?,
         })
     }
 }

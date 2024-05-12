@@ -1,13 +1,12 @@
 use petgraph::{
     algo::FloatMeasure,
-    visit::{EdgeRef, IntoEdges},
+    visit::{EdgeRef, GraphBase, IntoEdgeReferences, IntoEdges},
 };
 
 pub struct NegativeCycles<G, F, K>
 where
     G: IntoEdges,
     F: FnMut(G::EdgeRef) -> K,
-    K: FloatMeasure,
 {
     g: G,
     start: G::NodeId,
@@ -53,6 +52,10 @@ where
             };
 
             let next_cost = *cost + (self.edge_cost)(next_edge);
+            // TODO
+            // if next_cost == K::infinite() {
+            //     continue;
+            // }
 
             if next_edge.target() == self.start {
                 if next_cost >= K::zero() {

@@ -2,7 +2,7 @@
 config = "https://ton.org/global-config.json"
 
 [arbitrage]
-max_length = 3
+max_length = 4
 
 [arbitrage.base_asset]
 type = "native"

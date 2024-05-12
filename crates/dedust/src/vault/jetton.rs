@@ -1,4 +1,4 @@
-use num_bigint::BigUint;
+use num::BigUint;
 use tlb::{
     BitReaderExt, BitWriterExt, CellBuilder, CellBuilderError, CellDeserialize, CellParser,
     CellParserError, CellSerialize, ConstU32, Ref,
