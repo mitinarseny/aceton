@@ -10,7 +10,7 @@ use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::Resource;
 use tokio::fs;
-use tracing::{level_filters::LevelFilter, Level, Subscriber};
+use tracing::{info, level_filters::LevelFilter, Level, Subscriber};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{
     filter::{FilterExt, Targets},
@@ -48,6 +48,7 @@ pub struct CliArgs {
 
 impl CliArgs {
     pub async fn config(&self) -> anyhow::Result<AcetonConfig> {
+        info!("reading config from '{}'", &self.config.display());
         let contents = fs::read_to_string(&self.config).await.context("read")?;
         toml::from_str(&contents).context("TOML")
     }

@@ -20,6 +20,7 @@ anyhow = "1"
 async-trait = "0.1"
 base64 = "0.21"
 bitvec = "1"
+chrono = "0.4"
 futures = "0.3"
 hex-literal = "0.4"
 impl-tools = "0.10"
@@ -33,8 +34,8 @@ serde_json = "1"
 serde_with = "3.8"
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tlb = "0.2.7"
-tlb-ton = { version = "0.2.7", features = ["serde"] }
+tlb = "0.2.8"
+tlb-ton = { version = "0.2.8", features = ["serde"] }
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"

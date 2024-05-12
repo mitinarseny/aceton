@@ -1,16 +1,19 @@
 use std::time::{Duration, SystemTime};
 
-use aceton_arbitrage::{Asset, Dex, DexPool};
-use aceton_core::TonContract;
 use async_trait::async_trait;
-use num::{traits::ConstZero, BigUint};
+use chrono::{Local, TimeDelta, Utc};
+use futures::{future, stream, StreamExt, TryStreamExt};
+use num::{BigUint, One};
 use tlb::CellSerializeExt;
 use tlb_ton::{
-    CommonMsgInfo, CurrencyCollection, ExternalInMsgInfo, ExtraCurrencyCollection, InternalMsgInfo,
-    Message, MsgAddress,
+    CommonMsgInfo, CurrencyCollection, ExtraCurrencyCollection, InternalMsgInfo, Message,
+    MsgAddress,
 };
 use tonlibjson_client::ton::TonClient;
 use tracing::instrument;
+
+use aceton_arbitrage::{Asset, Dex, DexPool};
+use aceton_core::TonContract;
 
 use crate::{
     api::DedustHTTPClient, DedustNativeVaultSwap, DedustPool, DedustPoolI, DedustPoolType,
@@ -37,17 +40,35 @@ impl Dex for DeDust {
 
     #[instrument(skip(self))]
     async fn get_pools(&self) -> anyhow::Result<Vec<Self::Pool>> {
-        Ok(self
-            .api
-            .get_available_pools()
-            .await?
-            .into_iter()
-            // TODO
-            .filter(|pool| {
-                matches!(pool.r#type, DedustPoolType::Volatile)
-                    && pool.reserves().iter().all(|r| **r > BigUint::from(1u64))
-            })
-            .collect())
+        const MAX_TRADE_AGE: TimeDelta = TimeDelta::days(10);
+
+        let now = Local::now();
+        stream::iter(
+            self.api
+                .get_available_pools()
+                .await?
+                .into_iter()
+                .filter(|pool| {
+                    // TODO
+                    matches!(pool.r#type, DedustPoolType::Volatile)
+                        && pool.reserves().into_iter().all(|r| r > &BigUint::one())
+                })
+                .map(|pool| async {
+                    let latest_trades = self.api.get_latest_trades(pool.address, 1).await?;
+                    let Some(last_trade) = latest_trades.last() else {
+                        return Ok(None);
+                    };
+
+                    if now.signed_duration_since(last_trade.created_at) > MAX_TRADE_AGE {
+                        return Ok(None);
+                    }
+                    Ok(Some(pool))
+                }),
+        )
+        .buffer_unordered(100)
+        .try_filter_map(future::ok)
+        .try_collect()
+        .await
     }
 
     async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<()> {
@@ -76,8 +97,8 @@ impl Dex for DeDust {
                 },
                 ihr_fee: BigUint::ZERO,
                 fwd_fee: BigUint::ZERO,
-                created_lt: 0, // TODO: ?
-                created_at: 0, // TODO: ?
+                created_lt: 0,       // TODO: ?
+                created_at: todo!(), // TODO: ?
             }),
             init: None,
             body: DedustNativeVaultSwap {
@@ -85,10 +106,7 @@ impl Dex for DeDust {
                 amount: amount_in,
                 step: steps,
                 params: SwapParams {
-                    deadline: (SystemTime::now() + Duration::from_secs(60))
-                        .duration_since(SystemTime::UNIX_EPOCH)
-                        .expect("deadline is before UNIX_EPOCH")
-                        .as_secs() as u32,
+                    deadline: Local::now().with_timezone(&Utc),
                     recepient: MsgAddress::NULL, // TODO: self addr or STONFI?
                     referral: MsgAddress::NULL,
                     fulfill_payload: Option::<()>::None, // TODO: STONFI swap msg?

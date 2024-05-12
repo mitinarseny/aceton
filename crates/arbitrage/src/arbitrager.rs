@@ -1,16 +1,14 @@
 use std::{
     collections::{HashMap, HashSet},
-    f32::consts::PI,
     fmt::Debug,
-    sync::Arc,
 };
 
 use aceton_graph::NegativeCycles;
 use anyhow::Context;
 use futures::{stream::FuturesUnordered, TryStreamExt};
-use num::{rational::Ratio, BigUint, ToPrimitive};
+use num::{rational::Ratio, BigUint, One, ToPrimitive};
 use petgraph::{
-    graph::{EdgeReference, NodeIndex},
+    graph::NodeIndex,
     visit::{
         DfsPostOrder, EdgeFiltered, EdgeRef, FilterEdge, GraphBase, IntoEdgeReferences, IntoEdges,
     },
@@ -21,6 +19,7 @@ use tracing::{info, instrument, warn};
 
 use crate::{ArbitragerConfig, Asset, Dex, DexPool, SwapPath};
 
+#[allow(type_alias_bounds)]
 type G<D: Dex> = Graph<Asset, D::Pool, Directed>;
 
 pub struct Arbitrager<D>
@@ -52,15 +51,14 @@ where
         };
         info!("building graph from {} pools...", pools.len());
         s.add_asset(base_asset);
-        s.g.reserve_exact_nodes(pools.len() * 2);
         s.add_pools(pools);
         info!("removing branches...");
         // s.remove_branches();
         s.g.shrink_to_fit();
         info!(
             "graph ready: {} assets, {} directed pools",
-            s.g.node_count(),
-            s.g.edge_count(),
+            s.asset_count(),
+            s.directed_pool_count(),
         );
         Ok(s)
     }
@@ -72,8 +70,21 @@ where
             .or_insert_with_key(|asset| self.g.add_node(asset.clone()))
     }
 
+    pub fn asset_count(&self) -> usize {
+        self.g.node_count()
+    }
+
+    pub fn directed_pool_count(&self) -> usize {
+        self.g.edge_count()
+    }
+
     fn add_pool(&mut self, pool: D::Pool) {
+        if !pool.reserves().into_iter().all(|r| r > &BigUint::one()) {
+            return;
+        }
+
         let assets = pool.assets().map(|asset| self.add_asset(asset));
+
         self.g.add_edge(assets[0], assets[1], pool.clone());
         self.g.add_edge(assets[1], assets[0], pool);
     }
@@ -95,11 +106,6 @@ where
         }
         self.g.retain_nodes(|_, node| keep.contains(&node))
     }
-
-    // fn iter_profitable_cycles(&self) -> impl Iterator<Item = SwapPath<&DP>> + '_ {
-    //     self.g
-    //         .profitable_cycles(self.cfg.base_asset, self.cfg.max_length)
-    // }
 
     fn make_message(&self, amount_in: BigUint, path: SwapPath<&D::Pool>) -> Message {
         let pools: Vec<_> = path.iter_pools().collect();
@@ -158,17 +164,22 @@ where
         D::Pool: Debug,
     {
         let TON: BigUint = 1_000_000_000u64.into();
-        let amount_in: BigUint = TON.clone() * 100u32;
+        let amount_in: BigUint = TON.clone() * 10u32;
 
-        info!("looking for profitable cycles...");
+        info!(
+            "looking for profitable cycles from base asset: {}",
+            self.cfg.base_asset
+        );
 
         loop {
+            // info!("loop");
             info!("updating pools reserves...");
             self.update_pools().await?;
             info!("pools updated!");
             let filtered_pools = self.filter_pools();
 
             let profitable_cycles = self.profitable_cycles(&filtered_pools);
+
             let Some(cycle) = profitable_cycles
                 // .inspect(|cycle| {
                 //     let amount_out = cycle.estimate_swap_out(amount_in.clone());

@@ -90,6 +90,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "base64 0.21.7",
+ "chrono",
+ "futures",
  "hex-literal",
  "impl-tools",
  "num",
@@ -412,8 +414,10 @@ checksum = "a21f936df1771bf62b77f047b726c4625ff2e8aa607c01ec06e5a05bd8463401"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.4",
 ]
 
@@ -2574,9 +2578,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bab8aad23f0b260c1da08e7c99500169ebb092a8547b7f54f81c7ece6c5353a"
+checksum = "ac191f73e5b5089171cbe4a23440f3546af7d037644ee951b04fbb28092921bd"
 dependencies = [
  "bitvec",
  "either",
@@ -2588,12 +2592,13 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fc6889c24b35710dcac93f718d519d1946ece75a51cb0a245c17a6760bac2b0"
+checksum = "38d98636b25cc8eec438450f866aab067228ddb23d1ab32622d96543290417e4"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
+ "chrono",
  "crc",
  "either",
  "hex",
@@ -2607,9 +2612,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9307732091ec7f771dea6c50c29ba19246884fda21314b6d1cb4db3d3893ac14"
+checksum = "52871ccb41121c119892b3ac3b08efc3376e4b40df4ae135f2a7a5bbb1600571"
 dependencies = [
  "bitvec",
  "either",

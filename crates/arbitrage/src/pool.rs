@@ -1,9 +1,7 @@
 use std::sync::Arc;
 
-use async_trait::async_trait;
 use impl_tools::autoimpl;
-use num::{rational::Ratio, traits::ConstZero, BigRational, BigUint, ToPrimitive};
-use tracing::info;
+use num::{rational::Ratio, BigUint, ToPrimitive};
 
 use crate::Asset;
 

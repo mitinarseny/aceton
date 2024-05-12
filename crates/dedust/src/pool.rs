@@ -1,7 +1,8 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use impl_tools::autoimpl;
-use num::{rational::Ratio, traits::ConstZero, BigUint};
+use num::{rational::Ratio, BigUint};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::EnumString;
@@ -9,11 +10,11 @@ use tlb::{
     BitPack, BitReader, BitReaderExt, BitUnpack, BitWriter, BitWriterExt, CellBuilder,
     CellBuilderError, CellDeserialize, CellParser, CellParserError, CellSerialize, Data, Ref,
 };
-use tlb_ton::{Coins, MsgAddress};
+use tlb_ton::{Coins, MsgAddress, UnixTimestamp};
 
 use aceton_arbitrage::{Asset, AssetWithMetadata, DexPool};
 use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
-use aceton_utils::{DecimalFloatStrAsRatio, Percent};
+use aceton_utils::DecimalFloatStrAsRatio;
 
 use crate::DedustAsset;
 
@@ -128,7 +129,7 @@ pub type Timestamp = u32;
 /// swap_params#_ deadline:Timestamp recipient_addr:MsgAddressInt referral_addr:MsgAddress
 /// fulfill_payload:(Maybe ^Cell) reject_payload:(Maybe ^Cell) = SwapParams;
 pub struct SwapParams<F, R> {
-    pub deadline: Timestamp,
+    pub deadline: DateTime<Utc>,
     pub recepient: MsgAddress,
     pub referral: MsgAddress,
     pub fulfill_payload: Option<F>,
@@ -142,7 +143,7 @@ where
 {
     fn store(&self, builder: &mut CellBuilder) -> Result<(), CellBuilderError> {
         builder
-            .pack(self.deadline)?
+            .pack_as::<_, UnixTimestamp>(self.deadline)?
             .pack(self.recepient)?
             .pack(self.referral)?
             .store_as::<_, Option<Ref>>(self.fulfill_payload.as_ref())?
@@ -158,7 +159,7 @@ where
 {
     fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
         Ok(Self {
-            deadline: parser.unpack()?,
+            deadline: parser.unpack_as::<_, UnixTimestamp>()?,
             recepient: parser.unpack()?,
             referral: parser.unpack()?,
             fulfill_payload: parser.parse_as::<_, Option<Ref>>()?,
