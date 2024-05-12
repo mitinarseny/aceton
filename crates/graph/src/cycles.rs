@@ -1,6 +1,6 @@
 use petgraph::{
     algo::FloatMeasure,
-    visit::{EdgeRef, GraphBase, IntoEdgeReferences, IntoEdges},
+    visit::{EdgeRef, IntoEdges},
 };
 
 pub struct NegativeCycles<G, F, K>
@@ -9,8 +9,7 @@ where
     F: FnMut(G::EdgeRef) -> K,
 {
     g: G,
-    start: G::NodeId,
-    stack: Vec<(K, G::Edges)>,
+    stack: Vec<(G::NodeId, K, G::Edges)>,
     path: Vec<G::EdgeRef>,
     edge_cost: F,
     max_length: Option<usize>,
@@ -25,8 +24,7 @@ where
     pub fn new(g: G, start: G::NodeId, edge_cost: F, max_length: impl Into<Option<usize>>) -> Self {
         Self {
             g,
-            start,
-            stack: [(K::zero(), g.edges(start))].into(),
+            stack: [(start, K::zero(), g.edges(start))].into(),
             path: Vec::new(),
             edge_cost,
             max_length: max_length.into(),
@@ -44,7 +42,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         'l: loop {
-            let (cost, edges) = self.stack.last_mut()?;
+            let (_, cost, edges) = self.stack.last_mut()?;
             let Some(next_edge) = edges.next() else {
                 self.path.pop();
                 self.stack.pop();
@@ -57,10 +55,22 @@ where
             //     continue;
             // }
 
-            if next_edge.target() == self.start {
-                if next_cost >= K::zero() {
-                    continue;
+            for (i, (node_id, last_cost, _)) in self.stack.iter().enumerate() {
+                if next_edge.target() == *node_id && next_cost >= *last_cost {
+                    // do not go through the same node for the second time
+                    // unless next_cost is now lower
+                    continue 'l;
                 }
+                if i > 0 {
+                    let edge = self.path[i - 1];
+                    if edge.id() == next_edge.id() {
+                        // do not go though the same edge more than once
+                        continue 'l;
+                    }
+                }
+            }
+
+            if next_edge.target() == self.stack[0].0 {
                 let mut cycle = self.path.clone();
                 cycle.push(next_edge);
                 return Some(cycle);
@@ -73,60 +83,73 @@ where
                 continue;
             }
 
-            if self.path.iter().any(|e| e.id() == next_edge.id()) {
-                // do not visit already visited
-                continue 'l;
-            }
-
             self.path.push(next_edge);
-            self.stack
-                .push((next_cost, self.g.edges(next_edge.target())));
+            self.stack.push((
+                next_edge.target(),
+                next_cost,
+                self.g.edges(next_edge.target()),
+            ));
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashSet;
 
-    use petgraph::{dot::Dot, Directed, Graph};
+    use petgraph::{
+        dot::{Config, Dot},
+        visit::NodeRef,
+        Graph,
+    };
 
     use super::*;
 
     #[test]
-    fn finds_all_cycles() {
+    fn finds_negative_cycles() {
         let mut g = Graph::new();
 
         let a = g.add_node("a");
         let b = g.add_node("b");
         let c = g.add_node("c");
         let d = g.add_node("d");
-        let e = g.add_node("e");
-        let f = g.add_node("f");
 
-        let ab = g.add_edge(a, b, "ab");
-        let af = g.add_edge(a, f, "af");
-        let ba = g.add_edge(b, a, "ba");
-        let bc = g.add_edge(b, c, "bc");
-        let be = g.add_edge(b, e, "be");
-        let bf = g.add_edge(b, f, "bf");
-        let cb = g.add_edge(c, b, "cb");
-        let cd = g.add_edge(c, d, "cd");
-        let ce = g.add_edge(c, e, "ce");
-        let eb = g.add_edge(e, b, "eb");
-        let ec = g.add_edge(e, c, "ec");
-        let ef = g.add_edge(e, f, "ef");
-        let fa = g.add_edge(f, a, "fa");
-        let fb = g.add_edge(f, b, "fb");
-        let fe = g.add_edge(f, e, "fe");
-        let fa1 = g.add_edge(f, a, "fa1");
+        let ab = g.add_edge(a, b, 7.0);
+        let _ad = g.add_edge(a, d, 12.0);
+        let _ba = g.add_edge(b, a, -6.0);
+        let bd = g.add_edge(b, d, 3.0);
+        let bc = g.add_edge(b, c, 5.0);
+        let _cb = g.add_edge(c, b, -4.0);
+        let cd = g.add_edge(c, d, -3.0);
+        let da = g.add_edge(d, a, -11.0);
+        let _db = g.add_edge(d, b, -2.0);
+        let _dc = g.add_edge(d, c, 4.0);
+        let da1 = g.add_edge(d, a, -12.0);
 
-        println!("{:?}", Dot::new(&g));
+        println!(
+            "{:?}",
+            Dot::with_attr_getters(
+                &g,
+                &[Config::EdgeNoLabel, Config::NodeNoLabel],
+                &|_, edge| format!("label = \"{}\"", edge.weight()),
+                &|_, node| format!("label = \"{}\"", node.weight())
+            )
+        );
 
-        let all = NegativeCycles::new(&g, a, |_| -1.0, None)
-            .map(|path| path.into_iter().map(|e| e.weight()).collect::<Vec<_>>())
+        let all = NegativeCycles::new(&g, a, |e| *e.weight(), None)
+            .map(|path| path.into_iter().map(|e| e.id()).collect::<Vec<_>>())
             .collect::<HashSet<_>>();
 
-        println!("all: {all:?}");
+        assert_eq!(
+            all,
+            [
+                [ab, bc, cd, da].into(),
+                [ab, bd, da1].into(),
+                [ab, bc, cd, da1].into(),
+                [ab, bd, da].into()
+            ]
+            .into_iter()
+            .collect()
+        );
     }
 }
