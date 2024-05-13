@@ -34,9 +34,9 @@ serde_json = "1"
 serde_with = "3.8"
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tlb = "0.2.13"
-tlb-ton = { version = "0.2.13", features = ["serde"] }
-ton-contracts = "0.2.13"
+tlb = "0.2.14"
+tlb-ton = { version = "0.2.14", features = ["serde"] }
+ton-contracts = "0.2.14"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"

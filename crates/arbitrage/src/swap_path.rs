@@ -1,6 +1,6 @@
 use core::{
     fmt::{self, Display},
-    iter,
+    iter, slice,
 };
 
 use itertools::{unfold, FoldWhile, Itertools};

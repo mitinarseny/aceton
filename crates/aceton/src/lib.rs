@@ -1,10 +1,7 @@
 pub mod config;
 
-use std::time::Duration;
-
 use anyhow::Context;
 use ton_contracts::{mnemonic::Keypair, Wallet};
-use tonlibjson_client::ton::TonClientBuilder;
 use tracing::info;
 
 use aceton_arbitrage::Arbitrager;
@@ -19,6 +16,7 @@ pub struct Aceton {
 impl Aceton {
     pub async fn new(cfg: AcetonConfig, key_pair: Keypair) -> anyhow::Result<Self> {
         let wallet = Wallet::derive_default(key_pair).context("wallet")?;
+        info!(wallet.address = %wallet.address());
 
         let http_client = reqwest::Client::new();
 
@@ -30,6 +28,7 @@ impl Aceton {
 
         let arbitrager = Arbitrager::new(
             cfg.arbitrage,
+            ton_client.clone(),
             DeDust::new(ton_client, DEDUST_FACTORY_MAINNET_ADDRESS, http_client),
             wallet,
         )

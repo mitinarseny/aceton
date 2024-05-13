@@ -1,13 +1,14 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use async_trait::async_trait;
-use chrono::{Local, TimeDelta, Utc};
+use chrono::{DateTime, Local, TimeDelta, Utc};
 use futures::{
     future,
     lock::Mutex,
     stream::{self, FuturesUnordered},
     StreamExt, TryFutureExt, TryStreamExt,
 };
+use lazy_static::lazy_static;
 use num::{BigUint, One};
 use tlb::CellSerializeExt;
 use tlb_ton::{
@@ -17,7 +18,7 @@ use tlb_ton::{
 use tonlibjson_client::ton::TonClient;
 use tracing::{debug, info, instrument};
 
-use aceton_arbitrage::{Asset, Dex, DexPool};
+use aceton_arbitrage::{Asset, Dex, DexBody, DexPool};
 use aceton_core::TonContract;
 
 use crate::{
@@ -57,13 +58,22 @@ impl DeDust {
     }
 }
 
+lazy_static! {
+    static ref SWAP_STEP_GAS: BigUint = 30_000_000u32.into(); // 0.03 TON
+    static ref SWAP_EXTERNAL_PAYOUT: BigUint = (
+        30_000_000u32 + // swap_external: 0.03 TON
+        20_000_000u32 // payout: 0.02 TON
+    ).into();
+}
+
 #[async_trait]
 impl Dex for DeDust {
     type Pool = DedustPool;
+    type Body = DedustNativeVaultSwap<(), ()>;
 
     #[instrument(skip(self))]
     async fn get_pools(&self) -> anyhow::Result<Vec<Self::Pool>> {
-        const MAX_TRADE_AGE: TimeDelta = TimeDelta::days(10);
+        const MAX_TRADE_AGE: TimeDelta = TimeDelta::days(2);
 
         stream::iter(
             self.api
@@ -111,46 +121,28 @@ impl Dex for DeDust {
         Ok(())
     }
 
-    async fn make_message(
+    async fn make_body(
         &self,
         query_id: u64,
         asset_in: Asset,
         amount_in: BigUint,
         steps: <Self::Pool as DexPool>::Step,
-    ) -> anyhow::Result<Message> {
-        let now = Local::now().with_timezone(&Utc);
-        // TODO: get vault address from factory
-        Ok(Message {
-            info: CommonMsgInfo::Internal(InternalMsgInfo {
-                ihr_disabled: true,
-                bounce: true,
-                bounced: false,
-                src: MsgAddress::NULL,
-                dst: self.vault_address(asset_in).await?,
-                value: CurrencyCollection {
-                    grams: amount_in.clone(), // TODO: + on network fees
-                    other: ExtraCurrencyCollection,
-                },
-                ihr_fee: BigUint::ZERO,
-                fwd_fee: BigUint::ZERO,
-                created_lt: 0, // TODO: ?
-                created_at: now,
-            }),
-            init: None,
+    ) -> anyhow::Result<DexBody<Self::Body>> {
+        Ok(DexBody {
+            dst: self.vault_address(asset_in).await?,
+            gas: &*SWAP_EXTERNAL_PAYOUT + &*SWAP_STEP_GAS * steps.len(),
             body: DedustNativeVaultSwap {
                 query_id,
                 amount: amount_in,
                 step: steps,
                 params: SwapParams {
-                    deadline: now + TimeDelta::seconds(30),
-                    recepient: MsgAddress::NULL, // TODO: self addr or STONFI?
+                    deadline: None,
+                    recepient: MsgAddress::NULL,
                     referral: MsgAddress::NULL,
-                    fulfill_payload: Option::<()>::None, // TODO: STONFI swap msg?
+                    fulfill_payload: Option::<()>::None,
                     reject_payload: Option::<()>::None,
                 },
-            }
-            .to_cell()
-            .unwrap(), // TODO: err
+            },
         })
     }
 }

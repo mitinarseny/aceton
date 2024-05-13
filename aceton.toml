@@ -3,6 +3,7 @@ config = "https://ton.org/global-config.json"
 
 [arbitrage]
 max_length = 5
+# amount_in_balance_coef = "0.7"
 
 [arbitrage.base_asset]
 type = "native"

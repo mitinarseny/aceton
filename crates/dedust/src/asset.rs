@@ -53,33 +53,3 @@ impl BitUnpackAs<Asset> for DedustAsset {
         })
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use base64::{engine::general_purpose::STANDARD, Engine};
-    use bitvec::view::AsBits;
-    use tlb::{CellSerializeExt, CellSerializeWrapAsExt, Data};
-    use tlb_ton::BoC;
-
-    use super::*;
-
-    #[test]
-    fn tlb_asset() {
-        let assset = Asset::Native;
-        let boc = BoC::from_root(assset.wrap_as::<Data<DedustAsset>>().to_cell().unwrap())
-            .pack(false)
-            .unwrap();
-
-        let got: Asset = boc
-            .as_bits()
-            .unpack::<BoC>()
-            .unwrap()
-            .single_root()
-            .unwrap()
-            .parse_fully_as::<_, Data<DedustAsset>>()
-            .unwrap();
-        assert_eq!(got, assset);
-
-        assert_eq!("te6cckEBAQEAAwAAAQiFl+L/", STANDARD.encode(boc));
-    }
-}

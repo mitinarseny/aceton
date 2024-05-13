@@ -129,10 +129,18 @@ pub type Timestamp = u32;
 /// swap_params#_ deadline:Timestamp recipient_addr:MsgAddressInt referral_addr:MsgAddress
 /// fulfill_payload:(Maybe ^Cell) reject_payload:(Maybe ^Cell) = SwapParams;
 pub struct SwapParams<F, R> {
-    pub deadline: DateTime<Utc>,
+    /// Specifies a deadline for the swap.
+    /// If the swap reaches the Pool after this time, it will be rejected.  
+    /// **Default**: 0 (disabled).
+    pub deadline: Option<DateTime<Utc>>,
+    /// Specifies an address where funds will be sent after the swap.  
+    /// **Default**: sender's address.
     pub recepient: MsgAddress,
+    /// Referral address. Required for the Referral Program.
     pub referral: MsgAddress,
+    /// Custom payload that will be attached to the fund transfer upon a **successful** swap.
     pub fulfill_payload: Option<F>,
+    /// Custom payload that will be attached to the fund transfer upon a **rejected** swap.
     pub reject_payload: Option<R>,
 }
 
@@ -143,7 +151,7 @@ where
 {
     fn store(&self, builder: &mut CellBuilder) -> Result<(), CellBuilderError> {
         builder
-            .pack_as::<_, UnixTimestamp>(self.deadline)?
+            .pack_as::<_, UnixTimestamp>(self.deadline.unwrap_or(DateTime::UNIX_EPOCH))?
             .pack(self.recepient)?
             .pack(self.referral)?
             .store_as::<_, Option<Ref>>(self.fulfill_payload.as_ref())?
@@ -159,7 +167,8 @@ where
 {
     fn parse(parser: &mut CellParser<'de>) -> Result<Self, CellParserError<'de>> {
         Ok(Self {
-            deadline: parser.unpack_as::<_, UnixTimestamp>()?,
+            deadline: Some(parser.unpack_as::<_, UnixTimestamp>()?)
+                .filter(|timestamp| *timestamp == DateTime::UNIX_EPOCH),
             recepient: parser.unpack()?,
             referral: parser.unpack()?,
             fulfill_payload: parser.parse_as::<_, Option<Ref>>()?,
@@ -172,6 +181,13 @@ where
 pub struct SwapStep {
     pub pool: MsgAddress,
     pub params: SwapStepParams,
+}
+
+impl SwapStep {
+    pub fn len(&self) -> usize {
+        // TODO: without recursion
+        1 + self.params.next.as_deref().map_or(0, SwapStep::len)
+    }
 }
 
 impl CellSerialize for SwapStep {
@@ -329,5 +345,46 @@ impl DexPool for DedustPool {
                 next: next.map(Box::new),
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn swap_step_len() {
+        assert_eq!(
+            SwapStep {
+                pool: MsgAddress::NULL,
+                params: SwapStepParams {
+                    kind: SwapKind::GivenIn,
+                    limit: BigUint::ZERO,
+                    next: Some(
+                        SwapStep {
+                            pool: MsgAddress::NULL,
+                            params: SwapStepParams {
+                                kind: SwapKind::GivenIn,
+                                limit: BigUint::ZERO,
+                                next: Some(
+                                    SwapStep {
+                                        pool: MsgAddress::NULL,
+                                        params: SwapStepParams {
+                                            kind: SwapKind::GivenIn,
+                                            limit: BigUint::ZERO,
+                                            next: None,
+                                        },
+                                    }
+                                    .into()
+                                ),
+                            },
+                        }
+                        .into()
+                    ),
+                },
+            }
+            .len(),
+            3
+        )
     }
 }

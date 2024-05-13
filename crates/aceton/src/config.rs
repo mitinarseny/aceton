@@ -8,7 +8,7 @@ use tonlibjson_client::ton::TonClientBuilder;
 use url::Url;
 
 #[serde_as]
-#[derive(Serialize, Deserialize)]
+#[derive(Deserialize)]
 pub struct AcetonConfig {
     #[serde_as(as = "DefaultOnNull")]
     pub ton: TonConfig,
@@ -43,6 +43,6 @@ impl TonConfig {
             _ => return Err(anyhow!("invalid TON config URL: {}", self.config)),
         }
         .set_timeout(Duration::from_secs(30))
-        .set_retry_percent(3.0))
+        .set_retry_percent(2.0))
     }
 }
