@@ -135,4 +135,4 @@ def get_dedust_pools_and_tokens():
 
 
 if __name__ == "__main__":
-    pools, tokens = get_all_pools_and_tokens()
+    pools, tokens = get_dedust_pools_and_tokens()
