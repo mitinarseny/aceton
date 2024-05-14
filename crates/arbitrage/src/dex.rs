@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use impl_tools::autoimpl;
 use num::BigUint;
 use tlb::CellSerialize;
-use tlb_ton::{Message, MsgAddress};
+use tlb_ton::MsgAddress;
 
 use crate::{Asset, DexPool};
 

@@ -22,6 +22,7 @@ base64 = "0.21"
 bitvec = "1"
 chrono = "0.4"
 futures = "0.3"
+hex = "0.4"
 hex-literal = "0.4"
 impl-tools = "0.10"
 itertools = "0.12"
@@ -34,9 +35,9 @@ serde_json = "1"
 serde_with = "3.8"
 strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tlb = "0.2.14"
-tlb-ton = { version = "0.2.14", features = ["serde"] }
-ton-contracts = "0.2.14"
+tlb = "0.2.16"
+tlb-ton = { version = "0.2.16", features = ["serde"] }
+ton-contracts = "0.2.16"
 tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
 url = "2.5"

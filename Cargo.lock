@@ -30,6 +30,7 @@ dependencies = [
  "base64 0.21.7",
  "chrono",
  "futures",
+ "hex",
  "impl-tools",
  "itertools",
  "lazy_static",
@@ -40,6 +41,7 @@ dependencies = [
  "serde_with",
  "tlb",
  "tlb-ton",
+ "tokio",
  "ton-contracts",
  "tonlibjson-client",
  "tonlibjson-sys",
@@ -2589,9 +2591,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.14"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b38c3c11a27889be4b73d7ccad9821d158c1507372fa5ccc6c8e5b3f405f7d89"
+checksum = "1cf63b8049ba4534479265d8d6be6bde035f0c17974d047acfab166879b106e3"
 dependencies = [
  "bitvec",
  "either",
@@ -2603,9 +2605,9 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.14"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7e2eac43a680c79d852e29640de0f91e1b18fd5f8b381eb53d6481c3ae80fa81"
+checksum = "b1ebb77f5995ea507b1a13d1ebf268082614cfac94bd6bd3fe6fa98cb34df49b"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
@@ -2623,9 +2625,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.14"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55d74e74a3309e63d85d430dbd74ed416b88403da2f74676c2bcfde7fa19e8dc"
+checksum = "e211ad6658bbd9595ed910712e1e16be8d4afe74b8fadad9ca139bee66b232a0"
 dependencies = [
  "bitvec",
  "either",
@@ -2768,9 +2770,9 @@ dependencies = [
 
 [[package]]
 name = "ton-contracts"
-version = "0.2.14"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "46d6d624862d42285e2de9d05ff9a1aa64632e2d666db93c5474dd7741b728c5"
+checksum = "bbbd7cd7a29f981ea46d06ca6e9a408500d7a15db9647829b2e1c459978e599b"
 dependencies = [
  "anyhow",
  "bitvec",

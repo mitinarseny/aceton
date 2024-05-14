@@ -2,14 +2,15 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     sync::atomic::{AtomicU64, Ordering},
+    time::Duration,
 };
 
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose::STANDARD, Engine};
-use chrono::{DateTime, Local, TimeDelta, Utc};
+use chrono::{Local, TimeDelta, Utc};
 use futures::{stream::FuturesUnordered, try_join, TryStreamExt};
 use lazy_static::lazy_static;
-use num::{rational::Ratio, traits::ConstZero, BigUint, One, ToPrimitive};
+use num::{rational::Ratio, BigUint, One, ToPrimitive};
 use petgraph::{
     graph::NodeIndex,
     visit::{
@@ -19,17 +20,17 @@ use petgraph::{
 };
 use tlb::CellSerializeExt;
 use tlb_ton::{
-    BagOfCells, CommonMsgInfo, CurrencyCollection, ExternalInMsgInfo, ExtraCurrencyCollection,
-    InternalMsgInfo, Message, MsgAddress,
+    BagOfCells, BoC, CommonMsgInfo, CurrencyCollection, ExtraCurrencyCollection, InternalMsgInfo,
+    Message, MsgAddress,
 };
 use ton_contracts::{v4r2::V4R2, Wallet, WalletOpSendMessage};
 use tonlibjson_client::ton::TonClient;
-use tracing::{debug, info, instrument, warn};
+use tracing::{info, instrument, warn};
 
 use aceton_core::{TonContract, WalletI};
 use aceton_graph::NegativeCycles;
 
-use crate::{ArbitragerConfig, Asset, Dex, DexBody, DexPool, SwapPath, SwapStep};
+use crate::{ArbitragerConfig, Asset, Dex, DexBody, DexPool, SwapPath};
 
 lazy_static! {
     static ref KEEP_MIN_TON: BigUint = 2_000_000_000u64.into(); // 2 TON
@@ -266,7 +267,7 @@ where
                 ihr_fee: BigUint::ZERO,
                 fwd_fee: BigUint::ZERO,
                 created_lt: 0,
-                created_at: DateTime::UNIX_EPOCH,
+                created_at: None,
             }),
             init: None,
             body,
@@ -284,17 +285,13 @@ where
         let msg = self.wallet.create_external_message(
             expire_at,
             seqno,
-            // TODO
             [WalletOpSendMessage {
                 mode: 3,
-                message: Message {
-                    info: message.info,
-                    init: message.init,
-                    body: message.body.to_cell()?,
-                },
+                message: message.normalize()?,
             }],
             false,
         )?;
+        info!(?msg);
 
         let boc = BagOfCells::from_root(msg.to_cell()?);
         let packed = boc.pack(true)?;
@@ -303,7 +300,8 @@ where
             .ton
             .send_message_returning_hash(STANDARD.encode(packed).as_str())
             .await?;
-        warn!(tx.hash = tx_hash, "sent tx");
+        let decoded_tx_hash = STANDARD.decode(tx_hash)?;
+        warn!(tx.hash = hex::encode(decoded_tx_hash), "sent tx");
         Ok(())
     }
 
@@ -320,6 +318,7 @@ where
             let (seqno, base_asset_balance) =
                 try_join!(self.wallet_seqno(), self.base_asset_balance())?;
             info!(
+                seqno,
                 base_asset = %self.base_asset(),
                 base_asset.balance = %base_asset_balance,
             );
@@ -334,8 +333,7 @@ where
                 } else {
                     base_asset_balance
                 })
-            .to_integer()
-            .min(1_000_000_000u64.into());
+            .to_integer();
 
             info!(%amount_in, "looking for profitable cycles...");
             let filtered_pools = self.filter_pools();
@@ -356,11 +354,10 @@ where
 
             info!("found profitable cycle!");
 
-            let DexBody { dst, mut gas, body } = self.make_body(&amount_in, &cycle).await?;
-            gas = 0u32.into(); // TODO: remove
+            let DexBody { dst, gas, body } = self.make_body(&amount_in, &cycle).await?;
 
             let mut profit = &amount_out - &amount_in;
-            if profit <= &gas + BigUint::from(10_000_000u64) {
+            if profit <= &gas + BigUint::from(100_000_000u64) {
                 info!(%profit, %gas, "profit does not cover gas");
                 continue;
             }
@@ -388,7 +385,8 @@ where
                 )?,
             )
             .await?;
-            return Ok(());
+            info!("sleeping for 90 seconds...");
+            tokio::time::sleep(Duration::from_secs(90)).await;
         }
     }
 }

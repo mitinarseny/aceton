@@ -43,6 +43,6 @@ impl TonConfig {
             _ => return Err(anyhow!("invalid TON config URL: {}", self.config)),
         }
         .set_timeout(Duration::from_secs(30))
-        .set_retry_percent(2.0))
+        .set_retry_percent(3.0))
     }
 }

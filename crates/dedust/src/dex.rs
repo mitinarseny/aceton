@@ -1,28 +1,24 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 use async_trait::async_trait;
-use chrono::{DateTime, Local, TimeDelta, Utc};
+use chrono::{Local, TimeDelta};
 use futures::{
     future,
     lock::Mutex,
-    stream::{self, FuturesUnordered},
-    StreamExt, TryFutureExt, TryStreamExt,
+    stream::{self},
+    StreamExt, TryStreamExt,
 };
 use lazy_static::lazy_static;
 use num::{BigUint, One};
-use tlb::CellSerializeExt;
-use tlb_ton::{
-    CommonMsgInfo, CurrencyCollection, ExtraCurrencyCollection, InternalMsgInfo, Message,
-    MsgAddress,
-};
+use tlb_ton::MsgAddress;
 use tonlibjson_client::ton::TonClient;
-use tracing::{debug, info, instrument};
+use tracing::{debug, instrument};
 
 use aceton_arbitrage::{Asset, Dex, DexBody, DexPool};
 use aceton_core::TonContract;
 
 use crate::{
-    api::DedustHTTPClient, factory, DedustFactoryI, DedustNativeVaultSwap, DedustPool, DedustPoolI,
+    api::DedustHTTPClient, DedustFactoryI, DedustNativeVaultSwap, DedustPool, DedustPoolI,
     DedustPoolType, SwapParams,
 };
 
@@ -59,10 +55,11 @@ impl DeDust {
 }
 
 lazy_static! {
-    static ref SWAP_STEP_GAS: BigUint = 30_000_000u32.into(); // 0.03 TON
+    // 0.0225 TON ~= 0.025 TON
+    static ref SWAP_STEP_GAS: BigUint = 22_500_000u32.into();
     static ref SWAP_EXTERNAL_PAYOUT: BigUint = (
-        30_000_000u32 + // swap_external: 0.03 TON
-        20_000_000u32 // payout: 0.02 TON
+        100_000_000u32 + // swap_external: 0.08 TON ~= 0.1 TON
+        100_000_000u32 // payout: 0.09 TON ~= 0.1 TON
     ).into();
 }
 
