@@ -5,7 +5,6 @@ edition.workspace = true
 
 [dependencies]
 aceton-core.workspace = true
-aceton-arbitrage.workspace = true
 aceton-utils.workspace = true
 
 anyhow.workspace = true

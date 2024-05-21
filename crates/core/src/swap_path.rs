@@ -129,6 +129,10 @@ where
     pub fn optimal_amount_in(&self) -> BigUint {
         todo!()
     }
+
+    pub fn risk(&self) -> f64 {
+        todo!()
+    }
 }
 
 impl<DP> Extend<DP> for SwapPath<DP> {

@@ -1,5 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
+use aceton_core::{ton_utils::contract::TonContract, Asset, Dex, DexBody, DexPool};
 use async_trait::async_trait;
 use chrono::{Local, TimeDelta};
 use futures::{
@@ -13,9 +14,6 @@ use num::{BigUint, One};
 use tlb_ton::MsgAddress;
 use tonlibjson_client::ton::TonClient;
 use tracing::{debug, instrument};
-
-use aceton_arbitrage::{Asset, Dex, DexBody, DexPool};
-use aceton_core::TonContract;
 
 use crate::{
     api::DedustHTTPClient, DedustFactoryI, DedustNativeVaultSwap, DedustPool, DedustPoolI,
@@ -70,7 +68,7 @@ impl Dex for DeDust {
 
     #[instrument(skip(self))]
     async fn get_pools(&self) -> anyhow::Result<Vec<Self::Pool>> {
-        const MAX_TRADE_AGE: TimeDelta = TimeDelta::days(2);
+        // const MAX_TRADE_AGE: TimeDelta = TimeDelta::days(300);
 
         stream::iter(
             self.api
@@ -79,8 +77,8 @@ impl Dex for DeDust {
                 .into_iter()
                 .filter(|pool| {
                     // TODO
-                    matches!(pool.r#type, DedustPoolType::Volatile)
-                        && pool.reserves().into_iter().all(|r| r > &BigUint::one())
+                    // matches!(pool.r#type, DedustPoolType::Volatile)
+                    pool.reserves().into_iter().all(|r| r > &BigUint::one())
                 })
                 .map({
                     let now = Local::now();
@@ -90,9 +88,9 @@ impl Dex for DeDust {
                             return Ok(None);
                         };
 
-                        if now.signed_duration_since(last_trade.created_at) > MAX_TRADE_AGE {
-                            return Ok(None);
-                        }
+                        // if now.signed_duration_since(last_trade.created_at) > MAX_TRADE_AGE {
+                        //     return Ok(None);
+                        // }
                         Ok(Some(pool))
                     }
                 }),
@@ -103,19 +101,16 @@ impl Dex for DeDust {
         .await
     }
 
-    #[instrument(skip(self), fields(%pool.address))]
-    async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<()> {
+    #[instrument(skip_all, fields(%pool.address))]
+    async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<bool> {
         let pool_contract = TonContract::new(self.ton_client.clone(), pool.address);
         let new_reserves = pool_contract.get_reserves().await?;
-        if new_reserves != pool.reserves {
-            debug!(
-                old_reserves = ?pool.reserves,
-                ?new_reserves,
-                "pool updated",
-            );
-            pool.reserves = new_reserves
+        let is_updated = pool.reserves != new_reserves;
+        pool.reserves = new_reserves;
+        if is_updated {
+            debug!("pool updated");
         }
-        Ok(())
+        Ok(is_updated)
     }
 
     async fn make_body(

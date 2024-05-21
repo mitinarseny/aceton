@@ -1,8 +1,12 @@
+use aceton_core::{
+    ton_utils::{adapters::TvmBoxedStackEntryExt, contract::TonContractI},
+    Asset, AssetWithMetadata, DexPool,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use impl_tools::autoimpl;
-use num::{rational::Ratio, BigUint};
+use num::{rational::Ratio, traits::ConstZero, BigUint, ToPrimitive};
 use serde::Deserialize;
 use serde_with::{serde_as, DisplayFromStr};
 use strum::EnumString;
@@ -12,8 +16,6 @@ use tlb::{
 };
 use tlb_ton::{Coins, MsgAddress, UnixTimestamp};
 
-use aceton_arbitrage::{Asset, AssetWithMetadata, DexPool};
-use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
 use aceton_utils::DecimalFloatStrAsRatio;
 
 use crate::DedustAsset;
@@ -316,24 +318,84 @@ pub struct DedustPool {
 }
 
 impl DexPool for DedustPool {
+    type ID = MsgAddress;
     type Step = SwapStep;
 
+    #[inline]
+    fn id(&self) -> Self::ID {
+        self.address
+    }
+
+    #[inline]
     fn assets(&self) -> [Asset; 2] {
         let (a0, a1) = (self.assets[0].asset, self.assets[1].asset);
         [a0, a1].map(Into::into)
     }
 
+    #[inline]
     fn reserves(&self) -> [&BigUint; 2] {
         let [ref r0, ref r1] = &self.reserves;
         [r0, r1]
     }
 
     // TODO: pool type
+    #[inline]
     fn trade_fees(&self) -> [Ratio<BigUint>; 2] {
         [
             Ratio::from_integer(BigUint::from(1u32)) - &self.trade_fee / BigUint::from(100u32),
             Ratio::from_integer(1u32.into()),
         ]
+    }
+
+    #[inline]
+    fn ratio(&self, asset_in: Asset) -> Ratio<BigUint> {
+        match self.r#type {
+            DedustPoolType::Volatile => {
+                let [r_in, r_out] = self.reserves_in_out(asset_in);
+                Ratio::new(r_out.clone(), r_in.clone())
+            }
+            DedustPoolType::Stable => Ratio::from_integer(1u32.into()),
+        }
+    }
+
+    #[inline]
+    fn rate(&self, asset_in: Asset) -> f64 {
+        self.ratio(asset_in).to_f64().unwrap()
+    }
+
+    #[inline]
+    fn rate_with_fees(&self, asset_in: Asset) -> f64 {
+        (self.ratio(asset_in) * self.trade_fees().into_iter().product::<Ratio<BigUint>>())
+            .to_f64()
+            .unwrap()
+    }
+
+    fn estimate_swap_out(&self, asset_in: Asset, amount_in: &BigUint) -> BigUint {
+        let [reserve_in, reserve_out] = self.reserves_in_out(asset_in);
+        if [amount_in, reserve_in, reserve_out]
+            .into_iter()
+            .any(|v| v == &BigUint::ZERO)
+        {
+            return BigUint::ZERO;
+        }
+
+        let [fee_in, fee_out] = self.trade_fees();
+        let amount_in_with_fee = fee_in * amount_in;
+        match self.r#type {
+            DedustPoolType::Volatile => {
+                let amount_out = (&amount_in_with_fee * reserve_out
+                    / (amount_in_with_fee + reserve_in))
+                    .to_integer();
+                if &amount_out >= reserve_out {
+                    return BigUint::ZERO;
+                }
+                (fee_out * amount_out).to_integer()
+            }
+            // TODO: real stable swap formula
+            DedustPoolType::Stable => {
+                (amount_in_with_fee * Ratio::new(reserve_out.clone(), reserve_in.clone())).to_integer()
+            }
+        }
     }
 
     fn make_step(&self, amount_out_min: Option<BigUint>, next: Option<Self::Step>) -> Self::Step {

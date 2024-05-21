@@ -16,7 +16,7 @@ pub trait Dex {
 
     async fn get_pools(&self) -> anyhow::Result<Vec<Self::Pool>>;
 
-    async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<()>;
+    async fn update_pool(&self, pool: &mut Self::Pool) -> anyhow::Result<bool>;
 
     async fn make_body(
         &self,

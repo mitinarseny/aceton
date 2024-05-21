@@ -1,8 +1,7 @@
 [package]
-name = "aceton-graph"
+name = "aceton-graph-utils"
 version.workspace = true
 edition.workspace = true
 
 [dependencies]
-impl-tools.workspace = true
 petgraph.workspace = true

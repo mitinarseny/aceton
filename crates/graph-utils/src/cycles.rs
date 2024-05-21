@@ -22,13 +22,22 @@ where
     K: FloatMeasure,
 {
     pub fn new(g: G, start: G::NodeId, edge_cost: F, max_length: impl Into<Option<usize>>) -> Self {
-        Self {
+        let max_length = max_length.into();
+        let mut s = Self {
             g,
-            stack: [(start, K::zero(), g.edges(start))].into(),
-            path: Vec::new(),
+            stack: Vec::with_capacity(max_length.unwrap_or_default()),
+            path: Vec::with_capacity(max_length.unwrap_or_default()),
             edge_cost,
-            max_length: max_length.into(),
-        }
+            max_length,
+        };
+        s.restart(start);
+        s
+    }
+
+    pub fn restart(&mut self, start: G::NodeId) {
+        self.stack.clear();
+        self.stack.push((start, K::zero(), self.g.edges(start)));
+        self.path.clear();
     }
 }
 

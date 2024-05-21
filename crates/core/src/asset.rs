@@ -6,7 +6,7 @@ use tlb_ton::MsgAddress;
 use url::Url;
 
 #[serde_as]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum Asset {
     Native,

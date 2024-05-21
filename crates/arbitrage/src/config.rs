@@ -1,7 +1,7 @@
+use aceton_core::Asset;
 use num::{rational::Ratio, BigUint};
 use serde::Deserialize;
 
-use crate::Asset;
 
 #[derive(Deserialize)]
 pub struct ArbitragerConfig {

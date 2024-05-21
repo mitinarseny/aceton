@@ -1,18 +1,30 @@
+use core::{
+    cmp,
+    fmt::Debug,
+    hash::{self, Hash},
+};
+
 use std::{
     collections::{HashMap, HashSet},
-    fmt::Debug,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::{
+        atomic::{self, AtomicU64},
+        Arc,
+    },
     time::Duration,
 };
 
+use aceton_core::{
+    ton_utils::{contract::TonContract, wallet::WalletI},
+    Asset, Dex, DexBody, DexPool, SwapPath,
+};
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose::STANDARD, Engine};
 use chrono::{Local, TimeDelta, Utc};
-use futures::{stream::FuturesUnordered, try_join, TryStreamExt};
+use futures::{future, stream::FuturesUnordered, try_join, TryStreamExt};
 use lazy_static::lazy_static;
 use num::{rational::Ratio, BigUint, One, ToPrimitive};
 use petgraph::{
-    graph::NodeIndex,
+    graph::{EdgeIndex, NodeIndex},
     visit::{
         DfsPostOrder, EdgeFiltered, EdgeRef, FilterEdge, GraphBase, IntoEdgeReferences, IntoEdges,
     },
@@ -23,21 +35,19 @@ use tlb_ton::{
     BagOfCells, BoC, CommonMsgInfo, CurrencyCollection, ExtraCurrencyCollection, InternalMsgInfo,
     Message, MsgAddress,
 };
-use ton_contracts::{v4r2::V4R2, Wallet, WalletOpSendMessage};
+use ton_contracts::wallet::{v4r2::V4R2, Wallet, WalletOpSendMessage};
 use tonlibjson_client::ton::TonClient;
-use tracing::{info, instrument, warn};
+use tracing::{debug, info, instrument, warn};
 
-use aceton_core::{TonContract, WalletI};
-use aceton_graph::NegativeCycles;
+use aceton_graph_utils::NegativeCycles;
 
-use crate::{ArbitragerConfig, Asset, Dex, DexBody, DexPool, SwapPath};
+use crate::ArbitragerConfig;
 
 lazy_static! {
     static ref KEEP_MIN_TON: BigUint = 2_000_000_000u64.into(); // 2 TON
 }
 
-#[allow(type_alias_bounds)]
-type G<D: Dex> = Graph<Asset, D::Pool, Directed>;
+type G = Graph<Asset, f64, Directed>;
 
 pub struct Arbitrager<D>
 where
@@ -45,8 +55,17 @@ where
 {
     cfg: ArbitragerConfig,
     dex: D,
-    g: G<D>,
-    asset2index: HashMap<Asset, NodeIndex>,
+    g: G,
+
+    /// asset -> node_index
+    asset2node: HashMap<Asset, NodeIndex>,
+
+    /// edge_index -> pool_id
+    edge2pool: Vec<<D::Pool as DexPool>::ID>,
+
+    /// pool_id -> (pool, edge_indexes)
+    pools: HashMap<<D::Pool as DexPool>::ID, (D::Pool, [EdgeIndex; 2])>,
+
     query_id: AtomicU64,
 
     ton: TonClient,
@@ -72,11 +91,13 @@ where
         let mut s = Self {
             cfg,
             dex,
-            g: Graph::new(),
-            asset2index: Default::default(),
-            query_id: Default::default(),
             ton,
             wallet,
+            g: Graph::new(),
+            asset2node: Default::default(),
+            edge2pool: Default::default(),
+            pools: Default::default(),
+            query_id: Default::default(),
         };
         info!(pools_count = pools.len(), "building DEX graph...");
         s.add_asset(base_asset);
@@ -86,7 +107,7 @@ where
         s.g.shrink_to_fit();
         info!(
             asset_count = s.asset_count(),
-            directed_pool_count = s.directed_pool_count(),
+            pool_count = s.pool_count(),
             "DEX graph ready",
         );
         Ok(s)
@@ -94,7 +115,7 @@ where
 
     fn add_asset(&mut self, asset: Asset) -> NodeIndex {
         *self
-            .asset2index
+            .asset2node
             .entry(asset)
             .or_insert_with_key(|asset| self.g.add_node(asset.clone()))
     }
@@ -102,20 +123,29 @@ where
     pub fn asset_count(&self) -> usize {
         self.g.node_count()
     }
-
-    pub fn directed_pool_count(&self) -> usize {
-        self.g.edge_count()
+    pub fn pool_count(&self) -> usize {
+        self.pools.len()
     }
 
     fn add_pool(&mut self, pool: D::Pool) {
-        if !pool.reserves().into_iter().all(|r| r > &BigUint::one()) {
+        if !pool.is_active() {
             return;
         }
 
-        let assets = pool.assets().map(|asset| self.add_asset(asset));
+        let pool_id = pool.id();
+        let assets = pool.assets();
+        let nodes = assets.map(|asset| self.add_asset(asset));
 
-        self.g.add_edge(assets[0], assets[1], pool.clone());
-        self.g.add_edge(assets[1], assets[0], pool);
+        let edges = [(0, 1), (1, 0)].map(|(i_in, i_out)| {
+            self.edge2pool.push(pool_id.clone());
+            self.g.add_edge(
+                nodes[i_in],
+                nodes[i_out],
+                -pool.rate_with_fees(assets[i_in]).log2(),
+            )
+        });
+
+        self.pools.insert(pool_id, (pool, edges));
     }
 
     fn add_pools(&mut self, pools: impl IntoIterator<Item = D::Pool>) {
@@ -124,17 +154,17 @@ where
         }
     }
 
-    fn remove_branches(&mut self) {
-        // TODO: this invalidates node & edge indexes
-        let mut keep = HashSet::new();
-        let mut nodes = DfsPostOrder::new(&self.g, self.asset2index[&self.base_asset()]);
-        while let Some(node) = nodes.next(&self.g) {
-            if self.g.neighbors_undirected(node).count() >= 1 {
-                keep.insert(node);
-            }
-        }
-        self.g.retain_nodes(|_, node| keep.contains(&node))
-    }
+    // fn remove_branches(&mut self) {
+    //     // TODO: this invalidates node & edge indexes
+    //     let mut keep = HashSet::new();
+    //     let mut nodes = DfsPostOrder::new(&self.g, self.asset2node[&self.base_asset()]);
+    //     while let Some(node) = nodes.next(&self.g) {
+    //         if self.g.neighbors_undirected(node).count() >= 1 {
+    //             keep.insert(node);
+    //         }
+    //     }
+    //     self.g.retain_nodes(|_, node| keep.contains(&node))
+    // }
 
     async fn wallet_seqno(&self) -> anyhow::Result<u32> {
         let wallet = TonContract::new(self.ton.clone(), self.wallet.address());
@@ -146,7 +176,7 @@ where
     }
 
     fn base_asset_id(&self) -> NodeIndex {
-        self.asset2index[&self.base_asset()]
+        self.asset2node[&self.base_asset()]
     }
 
     pub async fn base_asset_balance(&self) -> anyhow::Result<BigUint> {
@@ -169,42 +199,60 @@ where
 
     fn filter_pools(
         &self,
-    ) -> EdgeFiltered<&G<D>, impl FilterEdge<<&G<D> as IntoEdgeReferences>::EdgeRef>> {
-        EdgeFiltered::from_fn(&self.g, |edge: <&G<D> as IntoEdgeReferences>::EdgeRef| {
-            edge.weight()
-                .reserves()
-                .iter()
-                .all(|r| **r != BigUint::ZERO)
+    ) -> EdgeFiltered<&G, impl FilterEdge<<&G as IntoEdgeReferences>::EdgeRef>> {
+        EdgeFiltered::from_fn(&self.g, |edge: <&G as IntoEdgeReferences>::EdgeRef| {
+            // check that -log is finite
+            edge.weight().is_finite()
         })
     }
 
     fn profitable_cycles<'a, G1>(&'a self, g: G1) -> impl Iterator<Item = SwapPath<&D::Pool>>
     where
         G1: IntoEdges<
-            NodeId = <&'a G<D> as GraphBase>::NodeId,
-            EdgeRef = <&'a G<D> as IntoEdgeReferences>::EdgeRef,
+            NodeId = <&'a G as GraphBase>::NodeId,
+            EdgeRef = <&'a G as IntoEdgeReferences>::EdgeRef,
         >,
     {
         NegativeCycles::new(
             g,
             self.base_asset_id(),
-            |edge| -edge.weight().rate_with_fees(self.g[edge.source()]).log2(),
+            |edge| *edge.weight(),
             self.cfg.max_length,
         )
         .map(|pools| {
             let mut p = SwapPath::new(self.base_asset());
-            p.extend(pools.into_iter().map(|e| e.weight()));
+            p.extend(
+                pools
+                    .into_iter()
+                    .map(|e| &self.pools[&self.edge2pool[e.id().index()]].0),
+            );
             p
         })
     }
 
     async fn update_pools(&mut self) -> anyhow::Result<()> {
-        self.g
-            .edge_weights_mut()
-            .map(|pool| self.dex.update_pool(pool))
+        let mut updated_pools = self
+            .pools
+            .iter_mut()
+            .map(|(pool_id, (pool, edges))| {
+                let dex = &self.dex;
+                async move {
+                    if !dex.update_pool(pool).await? {
+                        return Ok(None);
+                    }
+                    return anyhow::Ok(Some((pool_id, &*pool, *edges)));
+                }
+            })
             .collect::<FuturesUnordered<_>>()
-            .try_collect::<()>()
-            .await
+            .try_filter_map(future::ok);
+
+        while let Some((pool_id, pool, edges)) = updated_pools.try_next().await? {
+            for e in edges {
+                let (index_in, _index_out) = self.g.edge_endpoints(e).unwrap();
+                self.g[e] = -pool.rate_with_fees(self.g[index_in]).log2();
+            }
+        }
+        Ok(())
     }
 
     fn make_steps(
@@ -239,7 +287,7 @@ where
         let steps = self.make_steps(amount_in, path)?;
         self.dex
             .make_body(
-                self.query_id.fetch_add(1, Ordering::SeqCst),
+                self.query_id.fetch_add(1, atomic::Ordering::SeqCst),
                 self.base_asset(),
                 amount_in.clone(),
                 steps,
@@ -291,7 +339,6 @@ where
             }],
             false,
         )?;
-        info!(?msg);
 
         let boc = BagOfCells::from_root(msg.to_cell()?);
         let packed = boc.pack(true)?;
@@ -364,6 +411,13 @@ where
             profit -= &gas;
 
             let profit_rate = Ratio::new(profit, amount_in.clone()).to_f64().unwrap();
+            if profit_rate.to_f64().unwrap() < 0.05 {
+                info!(
+                    profit_rate_percent = format!("{:.2}", profit_rate * 100.0),
+                    "too small profit percent"
+                );
+                continue;
+            }
             info!(
                 %amount_in,
                 %amount_out,
@@ -385,8 +439,38 @@ where
                 )?,
             )
             .await?;
-            info!("sleeping for 90 seconds...");
-            tokio::time::sleep(Duration::from_secs(90)).await;
+            info!("sleeping for 60 seconds...");
+            tokio::time::sleep(Duration::from_secs(60)).await;
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq)]
+pub struct EdgeKey(Asset, Asset);
+
+impl EdgeKey {
+    fn sorted(self) -> (Asset, Asset) {
+        if self.0 > self.1 {
+            return (self.1, self.0);
+        }
+        (self.0, self.1)
+    }
+}
+
+impl PartialEq for EdgeKey {
+    fn eq(&self, other: &Self) -> bool {
+        self.sorted() == other.sorted()
+    }
+}
+
+impl PartialOrd for EdgeKey {
+    fn partial_cmp(&self, other: &Self) -> Option<cmp::Ordering> {
+        self.sorted().partial_cmp(&other.sorted())
+    }
+}
+
+impl Hash for EdgeKey {
+    fn hash<H: hash::Hasher>(&self, state: &mut H) {
+        self.sorted().hash(state)
     }
 }

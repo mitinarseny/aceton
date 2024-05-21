@@ -1,13 +1,18 @@
+use core::hash::Hash;
+
 use std::sync::Arc;
 
 use impl_tools::autoimpl;
-use num::{rational::Ratio, BigUint, ToPrimitive};
+use num::{rational::Ratio, BigUint, One, ToPrimitive};
 
 use crate::Asset;
 
 #[autoimpl(for<T: trait + ?Sized> &T, &mut T, Box<T>, Arc<T>)]
 pub trait DexPool {
+    type ID: Clone + Eq + Hash;
     type Step;
+
+    fn id(&self) -> Self::ID;
 
     fn assets(&self) -> [Asset; 2];
     /// In the same order as in [`.assets()`](DEXPool::assets)
@@ -19,10 +24,17 @@ pub trait DexPool {
 
     fn make_step(&self, amount_out_min: Option<BigUint>, next: Option<Self::Step>) -> Self::Step;
 
+    #[inline]
+    fn is_active(&self) -> bool {
+        self.reserves().into_iter().all(|r| r > &BigUint::one())
+    }
+
+    #[inline]
     fn reversed(&self, asset_in: Asset) -> bool {
         asset_in == self.assets()[1]
     }
 
+    #[inline]
     fn asset_out(&self, asset_in: Asset) -> Asset {
         let mut assets = self.assets();
         if self.reversed(asset_in) {
@@ -31,6 +43,7 @@ pub trait DexPool {
         assets[1]
     }
 
+    #[inline]
     fn reserves_in_out(&self, asset_in: Asset) -> [&BigUint; 2] {
         let mut reserves = self.reserves();
         if self.reversed(asset_in) {
@@ -39,19 +52,22 @@ pub trait DexPool {
         reserves
     }
 
-    fn rate(&self, asset_in: Asset) -> f64 {
+    #[inline]
+    fn ratio(&self, asset_in: Asset) -> Ratio<BigUint> {
         let [r_in, r_out] = self.reserves_in_out(asset_in);
-        Ratio::new(r_out.clone(), r_in.clone()).to_f64().unwrap()
+        Ratio::new(r_out.clone(), r_in.clone())
     }
 
+    #[inline]
+    fn rate(&self, asset_in: Asset) -> f64 {
+        self.ratio(asset_in).to_f64().unwrap()
+    }
+
+    #[inline]
     fn rate_with_fees(&self, asset_in: Asset) -> f64 {
-        self.rate(asset_in)
-            * self
-                .trade_fees()
-                .into_iter()
-                .product::<Ratio<BigUint>>()
-                .to_f64()
-                .unwrap()
+        (self.ratio(asset_in) * self.trade_fees().into_iter().product::<Ratio<BigUint>>())
+            .to_f64()
+            .unwrap()
     }
 
     fn estimate_swap_out(&self, asset_in: Asset, amount_in: &BigUint) -> BigUint {
@@ -86,7 +102,12 @@ mod tests {
     }
 
     impl DexPool for MockPool {
+        type ID = ();
         type Step = ();
+
+        fn id(&self) -> Self::ID {
+            ()
+        }
 
         fn assets(&self) -> [Asset; 2] {
             self.assets

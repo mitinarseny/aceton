@@ -5,7 +5,7 @@ edition.workspace = true
 
 [dependencies]
 aceton-core.workspace = true
-aceton-graph.workspace = true
+aceton-graph-utils.workspace = true
 aceton-utils.workspace = true
 
 anyhow.workspace = true

@@ -23,7 +23,7 @@ name = "aceton-arbitrage"
 version = "0.1.0"
 dependencies = [
  "aceton-core",
- "aceton-graph",
+ "aceton-graph-utils",
  "aceton-utils",
  "anyhow",
  "async-trait",
@@ -76,10 +76,11 @@ dependencies = [
 name = "aceton-core"
 version = "0.1.0"
 dependencies = [
+ "aceton-ton-utils",
  "anyhow",
  "async-trait",
- "base64 0.21.7",
- "bitvec",
+ "impl-tools",
+ "itertools",
  "num",
  "serde",
  "serde_with",
@@ -94,7 +95,6 @@ dependencies = [
 name = "aceton-dedust"
 version = "0.1.0"
 dependencies = [
- "aceton-arbitrage",
  "aceton-core",
  "aceton-utils",
  "anyhow",
@@ -120,11 +120,24 @@ dependencies = [
 ]
 
 [[package]]
-name = "aceton-graph"
+name = "aceton-graph-utils"
 version = "0.1.0"
 dependencies = [
- "impl-tools",
  "petgraph",
+]
+
+[[package]]
+name = "aceton-ton-utils"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "impl-tools",
+ "thiserror",
+ "tlb",
+ "tlb-ton",
+ "tonlibjson-client",
 ]
 
 [[package]]
@@ -2591,9 +2604,9 @@ dependencies = [
 
 [[package]]
 name = "tlb"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cf63b8049ba4534479265d8d6be6bde035f0c17974d047acfab166879b106e3"
+checksum = "1d20354114d14ba69c8b36d1f1346de78d8d1ad24a623cc724863cb199d80256"
 dependencies = [
  "bitvec",
  "either",
@@ -2605,9 +2618,9 @@ dependencies = [
 
 [[package]]
 name = "tlb-ton"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1ebb77f5995ea507b1a13d1ebf268082614cfac94bd6bd3fe6fa98cb34df49b"
+checksum = "e0ea03c76c97f81e127fc69f86274294ea8aa1bd2ec2911e888ac6c6cf11b191"
 dependencies = [
  "base64 0.21.7",
  "bitvec",
@@ -2625,9 +2638,9 @@ dependencies = [
 
 [[package]]
 name = "tlbits"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e211ad6658bbd9595ed910712e1e16be8d4afe74b8fadad9ca139bee66b232a0"
+checksum = "9d08dcf7137a52f02eea999ffa07340fd389df93a6ad6cefccd729011f2f826b"
 dependencies = [
  "bitvec",
  "either",
@@ -2770,9 +2783,9 @@ dependencies = [
 
 [[package]]
 name = "ton-contracts"
-version = "0.2.16"
+version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbbd7cd7a29f981ea46d06ca6e9a408500d7a15db9647829b2e1c459978e599b"
+checksum = "6ba0e0899e7a8cea45bd6aed818c8569c2b8ee20803512caa579e73680b0561a"
 dependencies = [
  "anyhow",
  "bitvec",

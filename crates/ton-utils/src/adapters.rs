@@ -3,10 +3,9 @@ use std::{error::Error as StdError, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose::STANDARD, Engine};
-use bitvec::view::AsBits;
 use tlb::{
-    BitUnpack, Cell, CellDeserializeAsOwned, CellDeserializeOwned, CellSerialize, CellSerializeAs,
-    CellSerializeExt, CellSerializeWrapAsExt,
+    unpack_bytes, Cell, CellDeserializeAsOwned, CellDeserializeOwned, CellSerialize,
+    CellSerializeAs, CellSerializeExt, CellSerializeWrapAsExt,
 };
 use tlb_ton::BoC;
 use tonlibjson_client::block::{
@@ -82,7 +81,7 @@ impl TvmBoxedStackEntryExt for TvmBoxedStackEntry {
 
         let bytes = STANDARD.decode(bytes).context("base64")?;
 
-        BoC::unpack(bytes.as_bits()).map_err(Into::into)
+        unpack_bytes(bytes).map_err(Into::into)
     }
 
     fn from_boc(boc: BoC) -> anyhow::Result<Self> {

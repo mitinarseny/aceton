@@ -1,4 +1,4 @@
-use aceton_arbitrage::Asset;
+use aceton_core::Asset;
 use tlb::{BitPackAs, BitReader, BitReaderExt, BitUnpackAs, BitWriter, BitWriterExt, Error, NBits};
 use tlb_ton::MsgAddress;
 

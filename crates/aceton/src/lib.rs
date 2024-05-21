@@ -1,7 +1,7 @@
 pub mod config;
 
 use anyhow::Context;
-use ton_contracts::{mnemonic::Keypair, Wallet};
+use ton_contracts::wallet::{mnemonic::Keypair, Wallet};
 use tracing::info;
 
 use aceton_arbitrage::Arbitrager;

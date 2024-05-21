@@ -1,4 +1,4 @@
-use aceton_arbitrage::Asset;
+use aceton_core::Asset;
 use chrono::{DateTime, Utc};
 use num::BigUint;
 use reqwest::Client;

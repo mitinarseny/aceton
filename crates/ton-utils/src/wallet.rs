@@ -1,7 +1,7 @@
 use anyhow::anyhow;
 use async_trait::async_trait;
 
-use crate::{TonContractI, TvmBoxedStackEntryExt};
+use crate::{adapters::TvmBoxedStackEntryExt, contract::TonContractI};
 
 #[async_trait]
 pub trait WalletI: TonContractI {

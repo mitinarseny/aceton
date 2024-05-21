@@ -10,7 +10,7 @@ use opentelemetry::KeyValue;
 use opentelemetry_otlp::{TonicExporterBuilder, WithExportConfig};
 use opentelemetry_sdk::Resource;
 use tokio::fs;
-use ton_contracts::mnemonic::{Keypair, Mnemonic};
+use ton_contracts::wallet::mnemonic::{Keypair, Mnemonic};
 use tracing::{info, level_filters::LevelFilter, Level, Subscriber};
 use tracing_opentelemetry::{MetricsLayer, OpenTelemetryLayer};
 use tracing_subscriber::{

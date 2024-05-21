@@ -1,5 +1,7 @@
-use aceton_arbitrage::Asset;
-use aceton_core::{TonContractI, TvmBoxedStackEntryExt};
+use aceton_core::{
+    ton_utils::{adapters::TvmBoxedStackEntryExt, contract::TonContractI},
+    Asset,
+};
 use anyhow::anyhow;
 use async_trait::async_trait;
 use hex_literal::hex;
