@@ -6,7 +6,7 @@ services:
   aceton:
     build: .
     command:
-      - '--mnemonic'
+      - '--secret'
       - '/run/secrets/aceton_mnemonic'
       - '--otlp-endpoint'
       - 'http://otel-collector:4317'

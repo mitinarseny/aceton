@@ -1,0 +1,9 @@
+[package]
+name = "aceton-utils"
+edition.workspace = true
+version.workspace = true
+
+[dependencies]
+num.workspace = true
+serde_with.workspace = true
+serde.workspace = true

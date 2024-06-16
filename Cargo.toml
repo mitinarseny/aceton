@@ -1,38 +1,52 @@
-[package]
-name = "aceton"
+[workspace]
+resolver = "2"
+members = ["./crates/*"]
+default-members = ["./crates/cli"]
+
+[workspace.package]
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
+[workspace.dependencies]
+aceton.path = "./crates/aceton"
+aceton-arbitrage.path = "./crates/arbitrage"
+aceton-cli.path = "./crates/cli"
+aceton-core.path = "./crates/core"
+aceton-dedust.path = "./crates/dedust"
+aceton-graph-utils.path = "./crates/graph-utils"
+aceton-ton-utils.path = "./crates/ton-utils"
+aceton-utils.path = "./crates/utils"
+
 anyhow = "1"
 async-trait = "0.1"
-clap = { version = "4", features = ["derive"] }
+base64 = "0.21"
+bitvec = "1"
+chrono = "0.4"
 futures = "0.3"
 hex = "0.4"
+hex-literal = "0.4"
 impl-tools = "0.10"
+itertools = "0.12"
 lazy_static = "1"
-libz-sys = { version = "1", default-features = false, features = ["zlib-ng"] }
-num-bigint = "0.4"
-opentelemetry = "0.21"
-opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.14", features = ["metrics"] }
-opentelemetry-semantic-conventions = "0.13"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1", features = ["derive"] }
+num = "0.4"
+petgraph = "0.6"
+reqwest = { version = "0.12", features = ["json"] }
+serde = "1"
 serde_json = "1"
-strum = "0.25"
+serde_with = "3.8"
+strum = { version = "0.26", features = ["derive"] }
 thiserror = "1"
-tonlib = "0.12"
-toml = "0.7.3"
+tlb = "0.2.17"
+tlb-ton = { version = "0.2.17", features = ["serde"] }
+ton-contracts = "0.2.17"
+tokio = { version = "1", features = ["full"] }
 tracing = "0.1"
-tracing-opentelemetry = "0.22"
+url = "2.5"
 
-[dependencies.tokio]
-version = "1"
-default-features = false
-features = ["fs", "macros", "rt-multi-thread", "signal"]
+[workspace.dependencies.tonlibjson-client]
+git = "https://github.com/getgems-io/ton-grpc.git"
+features = ["testnet"]
 
-[dependencies.tracing-subscriber]
-version = "0.3"
-default-features = false
-features = ["ansi", "fmt", "json", "smallvec", "std", "time"]
+[workspace.dependencies.tonlibjson-sys]
+git = "https://github.com/getgems-io/ton-grpc.git"
+features = ["testnet"]

@@ -1,0 +1,7 @@
+[package]
+name = "aceton-graph-utils"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+petgraph.workspace = true
